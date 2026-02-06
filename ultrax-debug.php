@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Ultrax Debug
  * Description: Beveiligde REST API endpoints voor Claude CLI site debugging.
- * Version: 1.7.0
+ * Version: 1.8.0
  * Update URI: https://github.com/ultrax-agency/ultrax-debug
  * Author: Ultrax Digital Agency
  * Author URI: https://ultrax.agency
@@ -12,7 +12,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('ULTRAX_DEBUG_VERSION', '1.7.0');
+define('ULTRAX_DEBUG_VERSION', '1.8.0');
 define('ULTRAX_DEBUG_GITHUB_REPO', 'sylliemillie/ultrax-debug');
 define('ULTRAX_DEBUG_PATH', plugin_dir_path(__FILE__));
 
@@ -245,6 +245,9 @@ MUPHP;
             'theme'        => 'get_theme',
             'database'     => 'get_database',
             'code-context' => 'get_code_context',
+            'styles'       => 'get_styles',
+            'forms'        => 'get_forms_detail',
+            'page'         => 'get_page_context',
         ];
 
         foreach ($endpoints as $route => $callback) {
@@ -644,10 +647,28 @@ MUPHP;
             $result['forms_count'] = count($forms);
             $result['forms_summary'] = array_map(function($f) {
                 return [
-                    'id'    => $f['id'],
-                    'title' => $f['title'],
+                    'id'           => $f['id'],
+                    'title'        => $f['title'],
+                    'is_active'    => (bool) ($f['is_active'] ?? false),
+                    'fields_count' => count($f['fields'] ?? []),
+                    'css_class'    => $f['cssClass'] ?? '',
                 ];
             }, array_slice($forms, 0, 10));
+
+            // Active add-on feeds (Zapier, Mailchimp, etc.)
+            if (method_exists('GFAPI', 'get_feeds')) {
+                $feeds = GFAPI::get_feeds();
+                $feed_summary = [];
+                foreach (($feeds ?: []) as $feed) {
+                    if (!empty($feed['is_active'])) {
+                        $feed_summary[] = [
+                            'addon_slug' => $feed['addon_slug'] ?? 'unknown',
+                            'form_id'    => $feed['form_id'] ?? 0,
+                        ];
+                    }
+                }
+                $result['feeds'] = array_slice($feed_summary, 0, 20);
+            }
         }
 
         if ($topic === 'woocommerce' && function_exists('wc_get_product')) {
@@ -661,6 +682,16 @@ MUPHP;
             $result['field_group_titles'] = array_map(function($g) {
                 return $g['title'];
             }, array_slice($groups, 0, 10));
+        }
+
+        if ($topic === 'divi') {
+            $divi_options = get_option('et_divi', []);
+            if (is_array($divi_options) && !empty($divi_options['custom_css'])) {
+                $result['custom_css_length'] = strlen($divi_options['custom_css']);
+            }
+            // Count Divi Library items
+            $library_count = wp_count_posts('et_pb_layout');
+            $result['builder_layouts'] = (int) ($library_count->publish ?? 0);
         }
 
         if ($topic === 'custom-post-types') {
@@ -683,6 +714,196 @@ MUPHP;
             'acf'           => 'https://www.advancedcustomfields.com/resources/',
         ];
         $result['docs_url'] = $docs[$topic] ?? null;
+
+        return $result;
+    }
+
+    /**
+     * GET /claude/v1/styles - CSS environment context
+     */
+    public function get_styles() {
+        $result = [
+            'stylesheets'    => [],
+            'customizer_css' => '',
+            'child_theme_css'=> '',
+            'divi_custom_css'=> null,
+        ];
+
+        // Registered stylesheets from wp_styles()
+        global $wp_styles;
+        if ($wp_styles instanceof WP_Styles) {
+            foreach ($wp_styles->registered as $handle => $style) {
+                $result['stylesheets'][] = [
+                    'handle'  => $handle,
+                    'src'     => $style->src ?: null,
+                    'deps'    => $style->deps,
+                    'version' => $style->ver,
+                ];
+            }
+        }
+
+        // Customizer CSS
+        $result['customizer_css'] = wp_get_custom_css();
+
+        // Child theme style.css (first 200 lines)
+        $child_css_path = get_stylesheet_directory() . '/style.css';
+        if (file_exists($child_css_path)) {
+            $lines = file($child_css_path, FILE_IGNORE_NEW_LINES);
+            $result['child_theme_css'] = implode("\n", array_slice($lines, 0, 200));
+        }
+
+        // Divi custom CSS (if Divi active)
+        $divi_options = get_option('et_divi', []);
+        if (is_array($divi_options) && !empty($divi_options['custom_css'])) {
+            $result['divi_custom_css'] = $divi_options['custom_css'];
+        }
+
+        return $result;
+    }
+
+    /**
+     * GET /claude/v1/forms - Gravity Forms detail
+     */
+    public function get_forms_detail(WP_REST_Request $request) {
+        if (!class_exists('GFAPI')) {
+            return new WP_Error('gf_not_active', 'Gravity Forms is niet actief', ['status' => 404]);
+        }
+
+        $form_id = (int) $request->get_param('id');
+
+        // Single form detail
+        if ($form_id > 0) {
+            $form = GFAPI::get_form($form_id);
+            if (!$form) {
+                return new WP_Error('form_not_found', 'Formulier niet gevonden', ['status' => 404]);
+            }
+
+            $fields = [];
+            foreach ($form['fields'] ?? [] as $field) {
+                $field_data = [
+                    'id'         => $field->id,
+                    'type'       => $field->type,
+                    'label'      => $field->label,
+                    'cssClass'   => $field->cssClass,
+                    'isRequired' => (bool) $field->isRequired,
+                ];
+                if (!empty($field->choices)) {
+                    $field_data['choices'] = array_map(function($c) {
+                        return ['text' => $c['text'], 'value' => $c['value']];
+                    }, $field->choices);
+                }
+                $fields[] = $field_data;
+            }
+
+            return [
+                'id'             => $form['id'],
+                'title'          => $form['title'],
+                'css_class'      => $form['cssClass'] ?? '',
+                'is_active'      => (bool) ($form['is_active'] ?? false),
+                'fields'         => $fields,
+                'confirmations'  => array_values(array_map(function($c) {
+                    return [
+                        'type'    => $c['type'] ?? 'message',
+                        'message' => isset($c['message']) ? wp_strip_all_tags(substr($c['message'], 0, 300)) : '',
+                    ];
+                }, $form['confirmations'] ?? [])),
+                'notifications'  => array_values(array_map(function($n) {
+                    return [
+                        'name'    => $n['name'] ?? '',
+                        'event'   => $n['event'] ?? '',
+                        'to'      => $n['toType'] ?? 'email',
+                        'subject' => $n['subject'] ?? '',
+                        'is_active' => (bool) ($n['isActive'] ?? true),
+                    ];
+                }, $form['notifications'] ?? [])),
+            ];
+        }
+
+        // All forms summary
+        $forms = GFAPI::get_forms();
+        $summary = [];
+        foreach ($forms as $form) {
+            $summary[] = [
+                'id'           => $form['id'],
+                'title'        => $form['title'],
+                'is_active'    => (bool) ($form['is_active'] ?? false),
+                'fields_count' => count($form['fields'] ?? []),
+                'entries_count'=> (int) GFAPI::count_entries($form['id']),
+            ];
+        }
+
+        return [
+            'total' => count($summary),
+            'forms' => $summary,
+        ];
+    }
+
+    /**
+     * GET /claude/v1/page - Page context by URL or ID
+     */
+    public function get_page_context(WP_REST_Request $request) {
+        $url = $request->get_param('url');
+        $post_id = (int) $request->get_param('id');
+
+        // Resolve URL to post ID
+        if (!empty($url) && $post_id === 0) {
+            $full_url = home_url($url);
+            $post_id = url_to_postid($full_url);
+        }
+
+        if ($post_id <= 0) {
+            return new WP_Error('page_not_found', 'Pagina niet gevonden. Gebruik ?url=/pad of ?id=42', ['status' => 404]);
+        }
+
+        $post = get_post($post_id);
+        if (!$post) {
+            return new WP_Error('page_not_found', 'Pagina niet gevonden', ['status' => 404]);
+        }
+
+        $result = [
+            'id'             => $post->ID,
+            'title'          => $post->post_title,
+            'slug'           => $post->post_name,
+            'status'         => $post->post_status,
+            'type'           => $post->post_type,
+            'template'       => get_page_template_slug($post->ID) ?: 'default',
+            'featured_image' => get_the_post_thumbnail_url($post->ID, 'full') ?: null,
+            'content_preview'=> wp_strip_all_tags(substr($post->post_content, 0, 500)),
+        ];
+
+        // Meta keys (filtered for sensitive data)
+        $sensitive_keys = ['password', 'secret', 'token', 'key', 'hash', 'nonce', 'auth'];
+        $all_meta = get_post_meta($post->ID);
+        $safe_meta_keys = [];
+        foreach (array_keys($all_meta) as $meta_key) {
+            $is_sensitive = false;
+            foreach ($sensitive_keys as $sensitive) {
+                if (stripos($meta_key, $sensitive) !== false) {
+                    $is_sensitive = true;
+                    break;
+                }
+            }
+            if (!$is_sensitive) {
+                $safe_meta_keys[] = $meta_key;
+            }
+        }
+        $result['meta_keys'] = $safe_meta_keys;
+
+        // Divi modules (if Divi builder content)
+        if (strpos($post->post_content, '[et_pb_') !== false) {
+            preg_match_all('/\[et_pb_(\w+)[\s\]]/', $post->post_content, $matches);
+            $result['divi_modules'] = array_values(array_unique($matches[1] ?? []));
+        }
+
+        // Yoast SEO data
+        $yoast_title = get_post_meta($post->ID, '_yoast_wpseo_title', true);
+        $yoast_desc = get_post_meta($post->ID, '_yoast_wpseo_metadesc', true);
+        if ($yoast_title || $yoast_desc) {
+            $result['yoast'] = [
+                'title'       => $yoast_title ?: null,
+                'description' => $yoast_desc ?: null,
+            ];
+        }
 
         return $result;
     }
@@ -902,6 +1123,9 @@ Endpoints:
 - /theme     — Actief thema + parent info
 - /database  — Tabellen en sizes (geen data)
 - /code-context?topic=X — Code context (gravity-forms|woocommerce|divi|acf|custom-post-types|rest-api|cron|general)
+- /styles    — CSS stylesheets, customizer CSS, theme CSS
+- /forms     — Gravity Forms structuur (?id=3 voor detail)
+- /page      — Pagina context (?url=/over-ons of ?id=42)
 
 Voorbeeld:
 curl -s -H "X-Claude-Token: <?php echo esc_attr($new_token); ?>" <?php echo esc_url(rest_url('claude/v1/status')); ?> | python3 -m json.tool
@@ -979,6 +1203,9 @@ Token is tijdelijk actief. Alle endpoints zijn read-only.</pre>
                     <tr><td><code>/claude/v1/theme</code></td><td>Actief thema info</td></tr>
                     <tr><td><code>/claude/v1/database</code></td><td>Database tabellen info (geen data)</td></tr>
                     <tr><td><code>/claude/v1/code-context</code></td><td>Code context (?topic=gravity-forms|woocommerce|divi|acf|...)</td></tr>
+                    <tr><td><code>/claude/v1/styles</code></td><td>CSS stylesheets, customizer CSS, theme CSS</td></tr>
+                    <tr><td><code>/claude/v1/forms</code></td><td>Gravity Forms structuur (?id=3 voor detail)</td></tr>
+                    <tr><td><code>/claude/v1/page</code></td><td>Pagina context (?url=/over-ons of ?id=42)</td></tr>
                 </table>
             </div>
 

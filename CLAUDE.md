@@ -30,6 +30,9 @@ curl -H "X-Claude-Token: <token>" https://site.nl/wp-json/claude/v1/status
 | `/claude/v1/theme` | Actief thema + parent info |
 | `/claude/v1/database` | Tabellen, row counts, sizes (GEEN data) |
 | `/claude/v1/code-context?topic=X` | Code context per topic |
+| `/claude/v1/styles` | CSS stylesheets, customizer CSS, theme CSS |
+| `/claude/v1/forms` | Gravity Forms structuur (alle of ?id=3) |
+| `/claude/v1/page?url=/pad` | Pagina context (of ?id=42) |
 
 ### Code Context Topics
 
@@ -158,6 +161,13 @@ Deze plugin is bewust single-file:
 ---
 
 ## Learnings
+
+### v1.8.0
+- `/styles` endpoint: CSS stylesheets, customizer CSS, child theme CSS, Divi custom CSS
+- `/forms` endpoint: Gravity Forms structuur inclusief fields, confirmations, notifications
+- `/page` endpoint: Pagina context met meta keys, Divi modules, Yoast data
+- Code-context verrijkt: GF forms_summary +fields_count/is_active/css_class, +feeds, Divi +builder_layouts/custom_css_length
+- Sensitive meta key filtering op page endpoint (password, secret, token, key, hash)
 
 ### v1.7.0
 - Managed Debug Logging: mu-plugin koppelt WP_DEBUG_LOG aan de timer
