@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Ultrax Debug
  * Description: Beveiligde REST API endpoints voor Claude CLI site debugging.
- * Version: 1.8.0
+ * Version: 1.8.1
  * Update URI: https://github.com/ultrax-agency/ultrax-debug
  * Author: Ultrax Digital Agency
  * Author URI: https://ultrax.agency
@@ -12,7 +12,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('ULTRAX_DEBUG_VERSION', '1.8.0');
+define('ULTRAX_DEBUG_VERSION', '1.8.1');
 define('ULTRAX_DEBUG_GITHUB_REPO', 'sylliemillie/ultrax-debug');
 define('ULTRAX_DEBUG_PATH', plugin_dir_path(__FILE__));
 
@@ -264,7 +264,7 @@ MUPHP;
      */
     public function check_permission(WP_REST_Request $request) {
         // 1. HTTPS check (allow localhost for dev)
-        $is_localhost = in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1']);
+        $is_localhost = in_array(sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? '')), ['127.0.0.1', '::1']);
         if (!is_ssl() && !$is_localhost) {
             $this->log_request($request->get_route(), 403);
             return new WP_Error('https_required', 'HTTPS is verplicht', ['status' => 403]);
@@ -335,13 +335,13 @@ MUPHP;
      * Get client IP (handles proxies)
      */
     private function get_client_ip() {
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        $ip = sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'));
 
         // Check for proxy headers
         $headers = ['HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP'];
         foreach ($headers as $header) {
             if (!empty($_SERVER[$header])) {
-                $ip = explode(',', $_SERVER[$header])[0];
+                $ip = sanitize_text_field(wp_unslash(explode(',', $_SERVER[$header])[0]));
                 break;
             }
         }
@@ -1089,9 +1089,9 @@ MUPHP;
         // Get request log
         global $wpdb;
         $log_table = $wpdb->prefix . 'ultrax_debug_log';
-        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$log_table'") === $log_table;
+        $table_exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $log_table)) === $log_table;
         $recent_requests = $table_exists ? $wpdb->get_results(
-            "SELECT * FROM $log_table ORDER BY created_at DESC LIMIT 20"
+            $wpdb->prepare("SELECT * FROM {$wpdb->prefix}ultrax_debug_log ORDER BY created_at DESC LIMIT %d", 20)
         ) : [];
 
         ?>
@@ -1411,7 +1411,7 @@ Token is tijdelijk actief. Alle endpoints zijn read-only.</pre>
         }
 
         global $wpdb;
-        $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}ultrax_debug_log");
+        $wpdb->query($wpdb->prepare("TRUNCATE TABLE {$wpdb->prefix}ultrax_debug_log"));
 
         wp_send_json_success();
     }
