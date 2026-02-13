@@ -1573,7 +1573,7 @@ class Ultrax_Debug_Updater {
         // Find zip asset or use zipball_url
         $download_url = $release['zipball_url'];
         foreach ($release['assets'] ?? [] as $asset) {
-            if (str_ends_with($asset['name'], '.zip')) {
+            if (substr($asset['name'], -4) === '.zip') {
                 $download_url = $asset['browser_download_url'];
                 break;
             }
