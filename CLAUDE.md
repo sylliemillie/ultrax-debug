@@ -57,7 +57,7 @@ Alle write endpoints vereisen:
 - Actieve timer (niet verlopen)
 - Geldige token
 - **Power Mode enabled** voor die categorie
-- Write rate limit: 5/min, 30/hr
+- Write rate limit: 10/min, 120/hr
 
 | Endpoint | Power Mode | Beschrijving |
 |----------|-----------|-------------|
@@ -410,8 +410,8 @@ Deny-by-default. Alleen veilige opties toegestaan. NOOIT: siteurl, home, admin_e
 |---------|---------------|
 | Token | Auto-generated, `password_hash()` opslag |
 | HTTPS | Verplicht (behalve localhost) |
-| Read rate limit | 10/min, 100/uur per IP |
-| Write rate limit | 5/min, 30/uur per IP |
+| Read rate limit | 30/min, 300/uur per IP |
+| Write rate limit | 10/min, 120/uur per IP |
 | Auto-disable | Timer-based (default 24u) — endpoints + debug logging + power modes |
 | Managed logging | mu-plugin toggled WP_DEBUG_LOG via timer |
 | IP whitelist | Optioneel in admin |
@@ -551,7 +551,7 @@ Typische flow voor het bouwen van een complete site:
 - Plugin toggle safeguards (kan zichzelf niet deactiveren)
 - Modulaire architectuur: main file + 3 includes
 - DB versie check voor upgrades zonder re-activatie
-- Stricter write rate limits (5/min, 30/hr vs 10/min, 100/hr voor reads)
+- Write rate limits: 10/min, 120/hr (reads: 30/min, 300/hr)
 
 ### v1.8.0
 - `/styles` endpoint: CSS stylesheets, customizer CSS, child theme CSS, Divi custom CSS

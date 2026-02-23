@@ -2,7 +2,7 @@
 /**
  * Plugin Name: LOIQ WordPress Agent
  * Description: Beveiligde REST API endpoints voor Claude CLI site debugging + write capabilities met safeguards.
- * Version: 3.0.0
+ * Version: 3.0.1
  * Update URI: https://github.com/LOIQ-ai/loiq-wp-assistent
  * Author: LOIQ
  * Author URI: https://loiq.nl
@@ -12,7 +12,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('LOIQ_AGENT_VERSION', '3.0.0');
+define('LOIQ_AGENT_VERSION', '3.0.1');
 define('LOIQ_AGENT_DB_VERSION', '2.0.0');
 define('LOIQ_AGENT_GITHUB_REPO', 'LOIQ-ai/loiq-wp-assistent');
 define('LOIQ_AGENT_PATH', plugin_dir_path(__FILE__));
@@ -41,8 +41,8 @@ class LOIQ_WP_Agent {
     private static $instance = null;
 
     // Rate limits
-    const RATE_LIMIT_MINUTE = 10;
-    const RATE_LIMIT_HOUR = 100;
+    const RATE_LIMIT_MINUTE = 30;
+    const RATE_LIMIT_HOUR = 300;
 
     // Default auto-disable hours
     const DEFAULT_HOURS = 24;
@@ -235,6 +235,9 @@ MUPHP;
         update_option('loiq_agent_db_version', LOIQ_AGENT_DB_VERSION);
     }
 
+    // Allowed email domains for admin visibility
+    const ALLOWED_EMAIL_DOMAINS = ['ultrax.agency', 'teamultrax.nl', 'teamultrax.com'];
+
     private function __construct() {
         // Ensure mu-plugin is installed and current after updates
         $this->maybe_update_mu_plugin();
@@ -245,10 +248,10 @@ MUPHP;
         // Activation redirect
         add_action('admin_init', [$this, 'activation_redirect']);
 
-        // Register REST routes (v1 + v2)
+        // Register REST routes (v1 + v2 + v3) — token-based, no email restriction
         add_action('rest_api_init', [$this, 'register_routes']);
 
-        // Admin menu
+        // Admin menu (email-gated in callback)
         add_action('admin_menu', [$this, 'add_admin_menu']);
 
         // Admin assets
@@ -265,6 +268,9 @@ MUPHP;
         add_action('wp_ajax_loiq_agent_save_power_modes', [$this, 'ajax_save_power_modes']);
         add_action('wp_ajax_loiq_agent_rollback', [$this, 'ajax_rollback']);
         add_action('wp_ajax_loiq_agent_remove_snippet', [$this, 'ajax_remove_snippet']);
+
+        // Hide plugin from plugins list for non-allowed users
+        add_filter('all_plugins', [$this, 'filter_plugin_visibility']);
     }
 
     /**
@@ -281,7 +287,7 @@ MUPHP;
      * Redirect to settings after activation
      */
     public function activation_redirect() {
-        if (get_transient('loiq_agent_activation_redirect')) {
+        if (get_transient('loiq_agent_activation_redirect') && self::is_allowed_admin_user()) {
             delete_transient('loiq_agent_activation_redirect');
             wp_redirect(admin_url('tools.php?page=loiq-wp-agent'));
             exit;
@@ -1284,9 +1290,47 @@ MUPHP;
     // =========================================================================
 
     /**
-     * Add admin menu under Tools
+     * Check if current user has an allowed email domain for admin access.
+     *
+     * Only users with @ultrax.agency, @teamultrax.nl, or @teamultrax.com emails
+     * can see the plugin in wp-admin. REST API access is unaffected (token-based).
+     *
+     * @return bool
+     */
+    public static function is_allowed_admin_user() {
+        $user = wp_get_current_user();
+        if (!$user || !$user->exists()) {
+            return false;
+        }
+        $email = strtolower($user->user_email);
+        foreach (self::ALLOWED_EMAIL_DOMAINS as $domain) {
+            if (substr($email, -strlen('@' . $domain)) === '@' . $domain) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Hide plugin from the plugins list for non-allowed users.
+     *
+     * @param array $plugins
+     * @return array
+     */
+    public function filter_plugin_visibility($plugins) {
+        if (!self::is_allowed_admin_user()) {
+            unset($plugins['loiq-wp-agent/loiq-wp-agent.php']);
+        }
+        return $plugins;
+    }
+
+    /**
+     * Add admin menu under Tools (only for allowed email domains)
      */
     public function add_admin_menu() {
+        if (!self::is_allowed_admin_user()) {
+            return;
+        }
         add_submenu_page(
             'tools.php',
             'LOIQ WP Agent',

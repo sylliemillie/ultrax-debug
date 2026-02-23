@@ -66,7 +66,7 @@ class LOIQ_Agent_Write_Endpoints {
             'callback'            => [__CLASS__, 'handle_css_deploy'],
             'permission_callback' => [$plugin, 'check_write_permission'],
             'args'                => [
-                'css'     => ['required' => true,  'type' => 'string', 'sanitize_callback' => 'wp_strip_all_tags'],
+                'css'     => ['required' => true,  'type' => 'string', 'sanitize_callback' => [__CLASS__, 'sanitize_css_input']],
                 'target'  => ['required' => false, 'type' => 'string', 'default' => 'child_theme', 'enum' => ['child_theme', 'divi_custom_css', 'customizer']],
                 'mode'    => ['required' => false, 'type' => 'string', 'default' => 'append', 'enum' => ['append', 'replace', 'prepend']],
                 'dry_run' => ['required' => false, 'type' => 'boolean', 'default' => false],
@@ -608,6 +608,24 @@ class LOIQ_Agent_Write_Endpoints {
     // =========================================================================
     // CSS HELPERS
     // =========================================================================
+
+    /**
+     * Sanitize CSS input — strips HTML tags but preserves newlines.
+     *
+     * WordPress theme headers (Theme Name, Template, etc.) require each field
+     * on its own line. wp_strip_all_tags() collapses whitespace including
+     * newlines, which breaks child theme detection.
+     *
+     * @param string $css Raw CSS input.
+     * @return string Sanitized CSS with newlines preserved.
+     */
+    public static function sanitize_css_input($css) {
+        // Remove script/style tags and their content
+        $css = preg_replace('@<(script|style)[^>]*?>.*?</\\1>@si', '', $css);
+        // Strip remaining HTML tags
+        $css = strip_tags($css);
+        return trim($css);
+    }
 
     /**
      * Get current CSS for a target.

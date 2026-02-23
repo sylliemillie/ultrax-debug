@@ -28,8 +28,8 @@ class LOIQ_Agent_Safeguards {
     ];
 
     /** Write rate limits */
-    const WRITE_RATE_LIMIT_MINUTE = 5;
-    const WRITE_RATE_LIMIT_HOUR   = 30;
+    const WRITE_RATE_LIMIT_MINUTE = 10;
+    const WRITE_RATE_LIMIT_HOUR   = 120;
 
     /** Snippet constraints */
     const SNIPPET_MAX_LINES   = 500;
