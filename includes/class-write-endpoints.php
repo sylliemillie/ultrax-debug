@@ -305,18 +305,6 @@ class LOIQ_Agent_Write_Endpoints {
         $active_plugins = get_option('active_plugins', []);
         $is_active = in_array($plugin_file, $active_plugins, true);
 
-        // Activation requires plugin whitelist (deny-by-default)
-        // Deactivation is always allowed (safe direction — turning things off)
-        if ($action === 'activate' && !$is_active) {
-            $allowed_plugins = get_option('loiq_agent_plugin_whitelist', []);
-            if (empty($allowed_plugins) || !in_array($plugin_file, $allowed_plugins, true)) {
-                return new WP_Error('plugin_not_whitelisted',
-                    "Plugin '{$plugin_file}' staat niet op de activatie-whitelist. Configureer via wp-admin > Tools > LOIQ WP Agent.",
-                    ['status' => 403]
-                );
-            }
-        }
-
         $snapshot_id = LOIQ_Agent_Safeguards::create_snapshot('plugin', $plugin_file, $active_plugins, null, false, $session);
         LOIQ_Agent_Audit::log_write($request->get_route(), 200, 'plugin', $plugin_file, $session, $dry_run);
 

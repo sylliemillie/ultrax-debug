@@ -17,8 +17,8 @@ delete_option('loiq_agent_ip_whitelist');
 // Delete options (v2.0)
 delete_option('loiq_agent_power_modes');
 delete_option('loiq_agent_db_version');
-delete_option('loiq_agent_plugin_whitelist');
-delete_option('loiq_agent_plugin_whitelist_text');
+delete_option('loiq_agent_plugin_whitelist'); // legacy cleanup
+delete_option('loiq_agent_plugin_whitelist_text'); // legacy cleanup
 delete_option('loiq_agent_trusted_proxy');
 
 // Delete transients (pattern matching for rate limits + lockouts — v1 + v2)

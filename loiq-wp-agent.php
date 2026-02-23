@@ -1483,20 +1483,6 @@ Token is tijdelijk actief. Alle endpoints zijn read-only.</pre>
                 </p>
             </div>
 
-            <div class="loiq-card">
-                <h2>Plugin Activatie Whitelist (v2.0)</h2>
-                <p>Alleen plugins op deze lijst mogen via de API <strong>geactiveerd</strong> worden. Deactivatie is altijd toegestaan (veilige richting). Laat leeg = geen activatie via API mogelijk.</p>
-                <p>Eén plugin-bestand per regel (bijv. <code>gravityforms/gravityforms.php</code>).</p>
-                <form method="post" action="options.php">
-                    <?php settings_fields('loiq_agent_settings'); ?>
-                    <textarea name="loiq_agent_plugin_whitelist_text" rows="4" style="width: 100%; font-family: monospace;"><?php
-                        $wl = get_option('loiq_agent_plugin_whitelist', []);
-                        echo esc_textarea(is_array($wl) ? implode("\n", $wl) : '');
-                    ?></textarea>
-                    <?php submit_button('Opslaan', 'secondary'); ?>
-                </form>
-            </div>
-
             <?php
             // v2.0: Snapshots
             $snapshots = LOIQ_Agent_Safeguards::get_snapshots(10);
@@ -2074,15 +2060,6 @@ add_action('admin_init', function() {
         'sanitize_callback' => 'sanitize_textarea_field',
     ]);
 
-    // Plugin activation whitelist (stored as array, input as textarea)
-    register_setting('loiq_agent_settings', 'loiq_agent_plugin_whitelist_text', [
-        'type' => 'string',
-        'sanitize_callback' => function($input) {
-            $lines = array_filter(array_map('trim', explode("\n", sanitize_textarea_field($input))));
-            update_option('loiq_agent_plugin_whitelist', array_values($lines));
-            return $input; // Store text version for the textarea
-        },
-    ]);
 });
 
 // Initialize
