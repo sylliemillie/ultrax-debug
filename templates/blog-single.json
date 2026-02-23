@@ -1,0 +1,80 @@
+{
+  "name": "Blog Single",
+  "description": "Blog overzichtspagina met recente posts en sidebar",
+  "sections": [
+    {
+      "type": "section",
+      "settings": {
+        "admin_label": "Header"
+      },
+      "children": [
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_1"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_1"},
+              "children": [
+                {
+                  "type": "text",
+                  "settings": {"text_orientation": "center"},
+                  "content": "<h1>Blog</h1><p>Laatste nieuws, inzichten en updates.</p>"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "settings": {
+        "admin_label": "Blog Content"
+      },
+      "children": [
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "2_3,1_3"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "2_3"},
+              "children": [
+                {
+                  "type": "blog",
+                  "settings": {
+                    "fullwidth": "off",
+                    "posts_number": "9",
+                    "show_author": "on",
+                    "show_date": "on",
+                    "show_categories": "on",
+                    "show_excerpt": "on"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "sidebar",
+                  "settings": {
+                    "area": "sidebar-1",
+                    "orientation": "left",
+                    "show_border": "off"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

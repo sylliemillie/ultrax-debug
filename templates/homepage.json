@@ -1,0 +1,255 @@
+{
+  "name": "Homepage",
+  "description": "Standaard homepage met hero, features, about, testimonials en CTA sectie",
+  "sections": [
+    {
+      "type": "fullwidth_section",
+      "children": [
+        {
+          "type": "fullwidth_header",
+          "settings": {
+            "title": "{{site_name}}",
+            "subhead": "{{tagline}}",
+            "text_orientation": "center",
+            "header_fullscreen": "off",
+            "header_scroll_down": "on",
+            "button_one_text": "Meer informatie",
+            "button_one_url": "#features",
+            "background_overlay_color": "rgba(0,0,0,0.4)"
+          },
+          "content": ""
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "settings": {
+        "admin_label": "Features",
+        "module_id": "features"
+      },
+      "children": [
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_3,1_3,1_3"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "blurb",
+                  "settings": {
+                    "title": "Dienst 1",
+                    "use_icon": "on",
+                    "font_icon": "%%170%%",
+                    "icon_placement": "top"
+                  },
+                  "content": "<p>Beschrijving van de eerste dienst of feature.</p>"
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "blurb",
+                  "settings": {
+                    "title": "Dienst 2",
+                    "use_icon": "on",
+                    "font_icon": "%%109%%",
+                    "icon_placement": "top"
+                  },
+                  "content": "<p>Beschrijving van de tweede dienst of feature.</p>"
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "blurb",
+                  "settings": {
+                    "title": "Dienst 3",
+                    "use_icon": "on",
+                    "font_icon": "%%236%%",
+                    "icon_placement": "top"
+                  },
+                  "content": "<p>Beschrijving van de derde dienst of feature.</p>"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "settings": {
+        "admin_label": "Over Ons",
+        "background_color": "#f7f7f7"
+      },
+      "children": [
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_2,1_2"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_2"},
+              "children": [
+                {
+                  "type": "image",
+                  "settings": {
+                    "src": "{{placeholder_image}}",
+                    "alt": "Over ons",
+                    "force_fullwidth": "on"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_2"},
+              "children": [
+                {
+                  "type": "text",
+                  "settings": {},
+                  "content": "<h2>Over {{site_name}}</h2><p>Vertel hier het verhaal van uw bedrijf. Wie bent u, wat doet u, en waarom kiest de klant voor u?</p>"
+                },
+                {
+                  "type": "button",
+                  "settings": {
+                    "button_text": "Lees meer",
+                    "button_url": "/over-ons"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "settings": {
+        "admin_label": "Testimonials"
+      },
+      "children": [
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_1"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_1"},
+              "children": [
+                {
+                  "type": "text",
+                  "settings": {"text_orientation": "center"},
+                  "content": "<h2>Wat onze klanten zeggen</h2>"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_3,1_3,1_3"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "testimonial",
+                  "settings": {
+                    "author": "Klant Naam",
+                    "job_title": "Functie",
+                    "company_name": "Bedrijf",
+                    "quote_icon": "on"
+                  },
+                  "content": "<p>Testimonial tekst hier.</p>"
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "testimonial",
+                  "settings": {
+                    "author": "Klant Naam",
+                    "job_title": "Functie",
+                    "company_name": "Bedrijf",
+                    "quote_icon": "on"
+                  },
+                  "content": "<p>Testimonial tekst hier.</p>"
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "testimonial",
+                  "settings": {
+                    "author": "Klant Naam",
+                    "job_title": "Functie",
+                    "company_name": "Bedrijf",
+                    "quote_icon": "on"
+                  },
+                  "content": "<p>Testimonial tekst hier.</p>"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "settings": {
+        "admin_label": "CTA",
+        "background_color": "#2d2d2d"
+      },
+      "children": [
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_1"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_1"},
+              "children": [
+                {
+                  "type": "cta",
+                  "settings": {
+                    "title": "Klaar om te starten?",
+                    "button_text": "Neem contact op",
+                    "button_url": "/contact",
+                    "use_background_color": "off"
+                  },
+                  "content": "<p>Neem vandaag nog contact met ons op voor een vrijblijvend gesprek.</p>"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

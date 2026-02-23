@@ -2,7 +2,7 @@
 /**
  * Plugin Name: LOIQ WordPress Agent
  * Description: Beveiligde REST API endpoints voor Claude CLI site debugging + write capabilities met safeguards.
- * Version: 2.0.2
+ * Version: 3.0.0
  * Update URI: https://github.com/LOIQ-ai/loiq-wp-assistent
  * Author: LOIQ
  * Author URI: https://loiq.nl
@@ -12,7 +12,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('LOIQ_AGENT_VERSION', '2.0.2');
+define('LOIQ_AGENT_VERSION', '3.0.0');
 define('LOIQ_AGENT_DB_VERSION', '2.0.0');
 define('LOIQ_AGENT_GITHUB_REPO', 'LOIQ-ai/loiq-wp-assistent');
 define('LOIQ_AGENT_PATH', plugin_dir_path(__FILE__));
@@ -21,6 +21,17 @@ define('LOIQ_AGENT_PATH', plugin_dir_path(__FILE__));
 require_once LOIQ_AGENT_PATH . 'includes/class-safeguards.php';
 require_once LOIQ_AGENT_PATH . 'includes/class-audit.php';
 require_once LOIQ_AGENT_PATH . 'includes/class-write-endpoints.php';
+
+// Load v3.0 includes
+require_once LOIQ_AGENT_PATH . 'includes/class-divi-builder.php';
+require_once LOIQ_AGENT_PATH . 'includes/class-divi-theme-builder.php';
+require_once LOIQ_AGENT_PATH . 'includes/class-page-endpoints.php';
+require_once LOIQ_AGENT_PATH . 'includes/class-child-theme.php';
+require_once LOIQ_AGENT_PATH . 'includes/class-menu-endpoints.php';
+require_once LOIQ_AGENT_PATH . 'includes/class-media-endpoints.php';
+require_once LOIQ_AGENT_PATH . 'includes/class-forms-endpoints.php';
+require_once LOIQ_AGENT_PATH . 'includes/class-facet-endpoints.php';
+require_once LOIQ_AGENT_PATH . 'includes/class-taxonomy-endpoints.php';
 
 /**
  * Main Plugin Class
@@ -398,6 +409,17 @@ MUPHP;
 
         // Register v2 write + management endpoints
         LOIQ_Agent_Write_Endpoints::register_routes($this);
+
+        // Register v3 site builder endpoints
+        LOIQ_Agent_Divi_Builder::register_routes($this);
+        LOIQ_Agent_Divi_Theme_Builder::register_routes($this);
+        LOIQ_Agent_Page_Endpoints::register_routes($this);
+        LOIQ_Agent_Child_Theme::register_routes($this);
+        LOIQ_Agent_Menu_Endpoints::register_routes($this);
+        LOIQ_Agent_Media_Endpoints::register_routes($this);
+        LOIQ_Agent_Forms_Endpoints::register_routes($this);
+        LOIQ_Agent_Facet_Endpoints::register_routes($this);
+        LOIQ_Agent_Taxonomy_Endpoints::register_routes($this);
     }
 
     /**
@@ -435,11 +457,26 @@ MUPHP;
     private function get_write_category(WP_REST_Request $request) {
         $route = $request->get_route();
 
+        // v2 routes
         if (strpos($route, '/css/') !== false) return 'css';
         if (strpos($route, '/option/') !== false) return 'options';
         if (strpos($route, '/plugin/') !== false) return 'plugins';
         if (strpos($route, '/content/') !== false) return 'content';
         if (strpos($route, '/snippet/') !== false) return 'snippets';
+
+        // v3 routes
+        if (strpos($route, '/divi/build') !== false) return 'divi_builder';
+        if (strpos($route, '/divi/library/save') !== false) return 'divi_builder';
+        if (strpos($route, '/theme-builder/') !== false) return 'divi_builder';
+        if (strpos($route, '/child-theme/') !== false) return 'child_theme';
+        if (strpos($route, '/menu/') !== false) return 'menus';
+        if (strpos($route, '/media/upload') !== false) return 'media';
+        if (strpos($route, '/forms/') !== false) return 'forms';
+        if (strpos($route, '/facet/') !== false) return 'facets';
+        if (strpos($route, '/page/create') !== false) return 'content';
+        if (strpos($route, '/page/clone') !== false) return 'content';
+        if (strpos($route, '/taxonomy/create-term') !== false) return 'content';
+        if (strpos($route, '/taxonomy/assign') !== false) return 'content';
 
         // Rollback: check the snapshot's action type
         if (strpos($route, '/rollback') !== false) return null; // Allow rollback regardless
@@ -1452,6 +1489,36 @@ Token is tijdelijk actief. Alle endpoints zijn read-only.</pre>
                     <tr><td><code>GET /claude/v2/snapshots</code></td><td>&mdash;</td><td>Recente snapshots lijst</td></tr>
                     <tr><td><code>GET /claude/v2/power-modes</code></td><td>&mdash;</td><td>Huidige power mode status</td></tr>
                 </table>
+
+                <h3>Site Builder Endpoints (v3) — vereist Power Mode</h3>
+                <table class="loiq-table">
+                    <tr><th>Endpoint</th><th>Power Mode</th><th>Beschrijving</th></tr>
+                    <tr><td><code>POST /claude/v3/page/create</code></td><td>content</td><td>Pagina aanmaken met Divi content of template</td></tr>
+                    <tr><td><code>POST /claude/v3/page/clone</code></td><td>content</td><td>Pagina dupliceren als draft</td></tr>
+                    <tr><td><code>GET /claude/v3/page/list</code></td><td>&mdash;</td><td>Pagina's lijst met status en Divi info</td></tr>
+                    <tr><td><code>POST /claude/v3/divi/build</code></td><td>divi_builder</td><td>JSON → Divi shortcode</td></tr>
+                    <tr><td><code>POST /claude/v3/divi/parse</code></td><td>&mdash;</td><td>Divi shortcode → JSON</td></tr>
+                    <tr><td><code>POST /claude/v3/divi/validate</code></td><td>&mdash;</td><td>Shortcode structuur valideren</td></tr>
+                    <tr><td><code>GET /claude/v3/divi/modules</code></td><td>&mdash;</td><td>Module registry</td></tr>
+                    <tr><td><code>GET /claude/v3/divi/templates</code></td><td>&mdash;</td><td>Page template library</td></tr>
+                    <tr><td><code>GET /claude/v3/theme-builder/list</code></td><td>&mdash;</td><td>Theme Builder templates</td></tr>
+                    <tr><td><code>POST /claude/v3/theme-builder/create</code></td><td>divi_builder</td><td>Template aanmaken</td></tr>
+                    <tr><td><code>POST /claude/v3/theme-builder/update</code></td><td>divi_builder</td><td>Template content updaten</td></tr>
+                    <tr><td><code>POST /claude/v3/theme-builder/assign</code></td><td>divi_builder</td><td>Template condities toewijzen</td></tr>
+                    <tr><td><code>POST /claude/v3/child-theme/functions/append</code></td><td>child_theme</td><td>Tagged block toevoegen aan functions.php</td></tr>
+                    <tr><td><code>POST /claude/v3/child-theme/functions/remove</code></td><td>child_theme</td><td>Tagged block verwijderen</td></tr>
+                    <tr><td><code>GET /claude/v3/child-theme/functions/list</code></td><td>&mdash;</td><td>Tagged blocks lijst</td></tr>
+                    <tr><td><code>POST /claude/v3/menu/create</code></td><td>menus</td><td>Menu aanmaken</td></tr>
+                    <tr><td><code>POST /claude/v3/menu/items/add</code></td><td>menus</td><td>Menu items toevoegen</td></tr>
+                    <tr><td><code>POST /claude/v3/menu/assign</code></td><td>menus</td><td>Menu toewijzen aan locatie</td></tr>
+                    <tr><td><code>POST /claude/v3/media/upload</code></td><td>media</td><td>Afbeelding uploaden (base64 of URL)</td></tr>
+                    <tr><td><code>GET /claude/v3/media/search</code></td><td>&mdash;</td><td>Media library doorzoeken</td></tr>
+                    <tr><td><code>POST /claude/v3/forms/create</code></td><td>forms</td><td>Gravity Forms formulier aanmaken</td></tr>
+                    <tr><td><code>POST /claude/v3/forms/update</code></td><td>forms</td><td>Formulier bewerken</td></tr>
+                    <tr><td><code>POST /claude/v3/facet/create</code></td><td>facets</td><td>FacetWP facet aanmaken</td></tr>
+                    <tr><td><code>POST /claude/v3/taxonomy/create-term</code></td><td>content</td><td>Taxonomy term aanmaken</td></tr>
+                    <tr><td><code>POST /claude/v3/taxonomy/assign</code></td><td>content</td><td>Terms toewijzen aan post</td></tr>
+                </table>
             </div>
 
             <div class="loiq-card">
@@ -1468,15 +1535,21 @@ Token is tijdelijk actief. Alle endpoints zijn read-only.</pre>
             // v2.0: Power Modes
             $power_modes = LOIQ_Agent_Safeguards::get_power_modes();
             $mode_labels = [
-                'css'      => ['CSS Deploy', 'CSS injecteren in child theme, Divi custom CSS, of customizer'],
-                'options'  => ['Option Updates', 'Whitelisted WP opties bijwerken (blogname, timezone, etc.)'],
-                'plugins'  => ['Plugin Toggle', 'Plugins activeren/deactiveren via API'],
-                'content'  => ['Content Updates', 'Post/pagina titel, content, meta en status bijwerken'],
-                'snippets' => ['Code Snippets', 'PHP snippets deployen als mu-plugin'],
+                'css'          => ['CSS Deploy', 'CSS injecteren in child theme, Divi custom CSS, of customizer'],
+                'options'      => ['Option Updates', 'Whitelisted WP opties bijwerken (blogname, timezone, etc.)'],
+                'plugins'      => ['Plugin Toggle', 'Plugins activeren/deactiveren via API'],
+                'content'      => ['Content Updates', 'Post/pagina titel, content, meta, pages en taxonomies bijwerken'],
+                'snippets'     => ['Code Snippets', 'PHP snippets deployen als mu-plugin'],
+                'divi_builder' => ['Divi Builder', 'Divi shortcodes bouwen, Theme Builder templates, Library items'],
+                'child_theme'  => ['Child Theme', 'functions.php tagged blocks toevoegen/verwijderen'],
+                'menus'        => ['Menu Management', 'WP menus aanmaken, items toevoegen, Max Mega Menu configuratie'],
+                'media'        => ['Media Upload', 'Afbeeldingen uploaden naar media library (max 5MB)'],
+                'forms'        => ['Gravity Forms', 'Formulieren aanmaken, bewerken en verwijderen via GFAPI'],
+                'facets'       => ['FacetWP', 'Facets en templates aanmaken/bewerken'],
             ];
             ?>
             <div class="loiq-card">
-                <h2>Power Modes (v2.0)</h2>
+                <h2>Power Modes (v3.0)</h2>
                 <p>Per-categorie write permissions. Standaard alles uitgeschakeld (fail-closed).</p>
                 <div class="loiq-power-modes">
                     <?php foreach ($mode_labels as $key => $info): ?>
@@ -1849,7 +1922,7 @@ Token is tijdelijk actief. Alle endpoints zijn read-only.</pre>
 
         $modes = isset($_POST['modes']) && is_array($_POST['modes']) ? $_POST['modes'] : [];
         $clean = [];
-        foreach (['css', 'options', 'plugins', 'content', 'snippets'] as $key) {
+        foreach (['css', 'options', 'plugins', 'content', 'snippets', 'divi_builder', 'child_theme', 'menus', 'media', 'forms', 'facets'] as $key) {
             $clean[$key] = !empty($modes[$key]);
         }
 

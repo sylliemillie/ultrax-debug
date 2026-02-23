@@ -1,0 +1,194 @@
+{
+  "name": "Diensten",
+  "description": "Diensten overzichtspagina met intro, diensten grid en CTA",
+  "sections": [
+    {
+      "type": "section",
+      "settings": {
+        "admin_label": "Header"
+      },
+      "children": [
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_1"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_1"},
+              "children": [
+                {
+                  "type": "text",
+                  "settings": {"text_orientation": "center"},
+                  "content": "<h1>Onze Diensten</h1><p>Ontdek wat wij voor u kunnen betekenen.</p>"
+                },
+                {
+                  "type": "divider",
+                  "settings": {
+                    "show_divider": "on",
+                    "divider_style": "solid",
+                    "divider_weight": "2px"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "settings": {
+        "admin_label": "Diensten Grid"
+      },
+      "children": [
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_3,1_3,1_3"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "blurb",
+                  "settings": {
+                    "title": "Dienst 1",
+                    "use_icon": "on",
+                    "font_icon": "%%170%%",
+                    "icon_placement": "top"
+                  },
+                  "content": "<p>Gedetailleerde beschrijving van deze dienst.</p>"
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "blurb",
+                  "settings": {
+                    "title": "Dienst 2",
+                    "use_icon": "on",
+                    "font_icon": "%%109%%",
+                    "icon_placement": "top"
+                  },
+                  "content": "<p>Gedetailleerde beschrijving van deze dienst.</p>"
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "blurb",
+                  "settings": {
+                    "title": "Dienst 3",
+                    "use_icon": "on",
+                    "font_icon": "%%236%%",
+                    "icon_placement": "top"
+                  },
+                  "content": "<p>Gedetailleerde beschrijving van deze dienst.</p>"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_3,1_3,1_3"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "blurb",
+                  "settings": {
+                    "title": "Dienst 4",
+                    "use_icon": "on",
+                    "font_icon": "%%155%%",
+                    "icon_placement": "top"
+                  },
+                  "content": "<p>Gedetailleerde beschrijving van deze dienst.</p>"
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "blurb",
+                  "settings": {
+                    "title": "Dienst 5",
+                    "use_icon": "on",
+                    "font_icon": "%%277%%",
+                    "icon_placement": "top"
+                  },
+                  "content": "<p>Gedetailleerde beschrijving van deze dienst.</p>"
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "blurb",
+                  "settings": {
+                    "title": "Dienst 6",
+                    "use_icon": "on",
+                    "font_icon": "%%320%%",
+                    "icon_placement": "top"
+                  },
+                  "content": "<p>Gedetailleerde beschrijving van deze dienst.</p>"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "settings": {
+        "admin_label": "CTA",
+        "background_color": "#f0f0f0"
+      },
+      "children": [
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_1"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_1"},
+              "children": [
+                {
+                  "type": "cta",
+                  "settings": {
+                    "title": "Interesse in onze diensten?",
+                    "button_text": "Neem contact op",
+                    "button_url": "/contact",
+                    "use_background_color": "off"
+                  },
+                  "content": "<p>Wij helpen u graag verder. Vraag een vrijblijvend gesprek aan.</p>"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

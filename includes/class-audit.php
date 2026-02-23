@@ -153,6 +153,22 @@ class LOIQ_Agent_Audit {
                 return "Post #{$target} bijgewerkt{$status}";
             case 'snippet':
                 return "Snippet '{$target}' gedeployed{$status}";
+            case 'divi':
+                return "Divi layout #{$target} bijgewerkt{$status}";
+            case 'theme_builder':
+                return "Theme Builder template #{$target} bijgewerkt{$status}";
+            case 'child_theme':
+                return "functions.php block '{$target}' gewijzigd{$status}";
+            case 'menu':
+                return "Menu '{$target}' gewijzigd{$status}";
+            case 'media':
+                return "Media #{$target} geüpload{$status}";
+            case 'form':
+                return "Gravity Form #{$target} gewijzigd{$status}";
+            case 'facet':
+                return "FacetWP configuratie bijgewerkt{$status}";
+            case 'taxonomy':
+                return "Taxonomy term '{$target}' gewijzigd{$status}";
             default:
                 return "{$action} op {$target}{$status}";
         }

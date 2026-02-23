@@ -1,0 +1,145 @@
+{
+  "name": "Contact",
+  "description": "Contactpagina met formulier, kaart en contactgegevens",
+  "sections": [
+    {
+      "type": "section",
+      "settings": {
+        "admin_label": "Header"
+      },
+      "children": [
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_1"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_1"},
+              "children": [
+                {
+                  "type": "text",
+                  "settings": {"text_orientation": "center"},
+                  "content": "<h1>Contact</h1><p>Neem gerust contact met ons op. We reageren binnen 24 uur.</p>"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "settings": {
+        "admin_label": "Content"
+      },
+      "children": [
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "2_3,1_3"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "2_3"},
+              "children": [
+                {
+                  "type": "contact_form",
+                  "settings": {
+                    "email": "{{admin_email}}",
+                    "title": "Stuur ons een bericht",
+                    "captcha": "on",
+                    "submit_button_text": "Verzenden"
+                  },
+                  "children": [
+                    {
+                      "type": "contact_field",
+                      "settings": {
+                        "field_id": "name",
+                        "field_title": "Naam",
+                        "field_type": "input",
+                        "required_mark": "on"
+                      }
+                    },
+                    {
+                      "type": "contact_field",
+                      "settings": {
+                        "field_id": "email",
+                        "field_title": "E-mailadres",
+                        "field_type": "email",
+                        "required_mark": "on"
+                      }
+                    },
+                    {
+                      "type": "contact_field",
+                      "settings": {
+                        "field_id": "phone",
+                        "field_title": "Telefoonnummer",
+                        "field_type": "input",
+                        "required_mark": "off"
+                      }
+                    },
+                    {
+                      "type": "contact_field",
+                      "settings": {
+                        "field_id": "message",
+                        "field_title": "Bericht",
+                        "field_type": "text",
+                        "required_mark": "on",
+                        "fullwidth_field": "on"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "text",
+                  "settings": {},
+                  "content": "<h3>Contactgegevens</h3><p><strong>Adres</strong><br>Straatnaam 123<br>1234 AB Plaatsnaam</p><p><strong>Telefoon</strong><br>+31 (0)12 345 6789</p><p><strong>E-mail</strong><br>info@{{domain}}</p>"
+                },
+                {
+                  "type": "text",
+                  "settings": {},
+                  "content": "<h3>Openingstijden</h3><p>Maandag - Vrijdag: 9:00 - 17:00<br>Zaterdag - Zondag: Gesloten</p>"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "fullwidth_section",
+      "settings": {
+        "admin_label": "Kaart"
+      },
+      "children": [
+        {
+          "type": "map",
+          "settings": {
+            "address": "Amsterdam, Nederland",
+            "zoom_level": "14",
+            "mouse_wheel": "off"
+          },
+          "children": [
+            {
+              "type": "map_pin",
+              "settings": {
+                "title": "{{site_name}}",
+                "pin_address": "Amsterdam, Nederland"
+              },
+              "content": "<p>Bezoek ons op dit adres.</p>"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

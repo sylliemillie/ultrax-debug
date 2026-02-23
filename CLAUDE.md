@@ -1,8 +1,8 @@
 # Claude Code Memory - LOIQ WordPress Agent
 
 ## Project Overview
-WordPress plugin voor beveiligde remote debugging + write capabilities via Claude CLI.
-**v2.0:** Read-only diagnose (v1) + write endpoints met safeguards (v2).
+WordPress plugin voor beveiligde remote debugging, write capabilities en volledige site building via Claude CLI.
+**v3.0:** Read-only diagnose (v1) + write endpoints (v2) + site builder met Divi, menus, media, forms, facets (v3).
 
 ---
 
@@ -25,6 +25,12 @@ curl -X POST -H "X-Claude-Token: <token>" \
   -H "Content-Type: application/json" \
   -d '{"css":".hero{color:red}","target":"child_theme","dry_run":true}' \
   https://site.nl/wp-json/claude/v2/css/deploy
+
+# Site Builder (v3) — vereist Power Mode enabled
+curl -X POST -H "X-Claude-Token: <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Homepage","template":"homepage","status":"draft"}' \
+  https://site.nl/wp-json/claude/v3/page/create
 ```
 
 ---
@@ -71,7 +77,218 @@ Alle write endpoints vereisen:
 
 ---
 
-## Write Endpoint Details
+## Site Builder Endpoints (v3)
+
+### Divi Builder
+
+| Endpoint | Method | Power Mode | Beschrijving |
+|----------|--------|-----------|-------------|
+| `/claude/v3/divi/build` | POST | divi_builder | JSON → Divi shortcode (met validatie) |
+| `/claude/v3/divi/parse` | POST | — (read) | Divi shortcode → structured JSON |
+| `/claude/v3/divi/validate` | POST | — (read) | Valideer shortcode structuur |
+| `/claude/v3/divi/modules` | GET | — | Module registry (35+ modules met attrs + voorbeelden) |
+| `/claude/v3/divi/templates` | GET | — | Beschikbare page templates |
+| `/claude/v3/divi/template/{name}` | GET | — | Template ophalen als JSON |
+
+### Divi Theme Builder
+
+| Endpoint | Method | Power Mode | Beschrijving |
+|----------|--------|-----------|-------------|
+| `/claude/v3/theme-builder/list` | GET | — | Alle templates met condities |
+| `/claude/v3/theme-builder/read` | GET | — | Template detail (header/body/footer content) |
+| `/claude/v3/theme-builder/create` | POST | divi_builder | Nieuwe template aanmaken |
+| `/claude/v3/theme-builder/update` | POST | divi_builder | Template layout content updaten |
+| `/claude/v3/theme-builder/assign` | POST | divi_builder | Condities toewijzen (use_on/exclude_from) |
+| `/claude/v3/divi/library/list` | GET | — | Divi Library items |
+| `/claude/v3/divi/library/save` | POST | divi_builder | Layout opslaan in Library |
+
+### Page Management
+
+| Endpoint | Method | Power Mode | Beschrijving |
+|----------|--------|-----------|-------------|
+| `/claude/v3/page/create` | POST | content | Nieuwe pagina met Divi content (JSON of shortcode) |
+| `/claude/v3/page/clone` | POST | content | Dupliceer pagina als draft |
+| `/claude/v3/page/list` | GET | — | Lijst pagina's met status, template, Divi info |
+
+### Child Theme Functions
+
+| Endpoint | Method | Power Mode | Beschrijving |
+|----------|--------|-----------|-------------|
+| `/claude/v3/child-theme/functions/read` | GET | — | Lees functions.php (volledig of per tagged block) |
+| `/claude/v3/child-theme/functions/append` | POST | child_theme | Tagged block toevoegen |
+| `/claude/v3/child-theme/functions/remove` | POST | child_theme | Tagged block verwijderen |
+| `/claude/v3/child-theme/functions/list` | GET | — | Lijst alle LOIQ-AGENT tagged blocks |
+
+### Menu Management
+
+| Endpoint | Method | Power Mode | Beschrijving |
+|----------|--------|-----------|-------------|
+| `/claude/v3/menu/list` | GET | — | Alle menus met locaties |
+| `/claude/v3/menu/create` | POST | menus | Menu aanmaken |
+| `/claude/v3/menu/items/add` | POST | menus | Items toevoegen (pages, custom links, hiërarchie) |
+| `/claude/v3/menu/items/reorder` | POST | menus | Volgorde wijzigen |
+| `/claude/v3/menu/assign` | POST | menus | Menu toewijzen aan locatie |
+| `/claude/v3/menu/mega-menu/read` | GET | — | Max Mega Menu config |
+| `/claude/v3/menu/mega-menu/configure` | POST | menus | Mega settings per item |
+
+### Media Upload
+
+| Endpoint | Method | Power Mode | Beschrijving |
+|----------|--------|-----------|-------------|
+| `/claude/v3/media/upload` | POST | media | Upload afbeelding (base64 of URL, max 5MB) |
+| `/claude/v3/media/search` | GET | — | Media library doorzoeken |
+
+### Gravity Forms
+
+| Endpoint | Method | Power Mode | Beschrijving |
+|----------|--------|-----------|-------------|
+| `/claude/v3/forms/create` | POST | forms | GF aanmaken via GFAPI |
+| `/claude/v3/forms/update` | POST | forms | Form bewerken |
+| `/claude/v3/forms/delete` | POST | forms | Form verwijderen |
+| `/claude/v3/forms/embed` | GET | — | Shortcode genereren |
+
+### FacetWP
+
+| Endpoint | Method | Power Mode | Beschrijving |
+|----------|--------|-----------|-------------|
+| `/claude/v3/facet/list` | GET | — | Alle facets + templates |
+| `/claude/v3/facet/create` | POST | facets | Facet aanmaken |
+| `/claude/v3/facet/update` | POST | facets | Facet bewerken |
+| `/claude/v3/facet/template` | POST | facets | Template config |
+
+### Taxonomy Management
+
+| Endpoint | Method | Power Mode | Beschrijving |
+|----------|--------|-----------|-------------|
+| `/claude/v3/taxonomy/list` | GET | — | Alle taxonomies + terms |
+| `/claude/v3/taxonomy/create-term` | POST | content | Term aanmaken |
+| `/claude/v3/taxonomy/assign` | POST | content | Terms toewijzen aan post |
+
+---
+
+## v3 Endpoint Details
+
+### Page Create
+```json
+// POST /claude/v3/page/create
+{
+    "title": "Homepage",
+    "template": "homepage",
+    "status": "draft",
+    "page_layout": "et_full_width_page",
+    "parent_id": 0,
+    "dry_run": false
+}
+```
+Templates: `homepage`, `diensten`, `contact`, `over-ons`, `blog-single`, `landing-page`.
+
+### Divi Build (JSON → Shortcode)
+```json
+// POST /claude/v3/divi/build
+{
+    "content": {
+        "type": "section",
+        "children": [{
+            "type": "row",
+            "settings": {"column_structure": "1_3,1_3,1_3"},
+            "children": [
+                {"type": "column", "children": [{"type": "blurb", "settings": {"title": "Dienst 1"}}]},
+                {"type": "column", "children": [{"type": "blurb", "settings": {"title": "Dienst 2"}}]},
+                {"type": "column", "children": [{"type": "blurb", "settings": {"title": "Dienst 3"}}]}
+            ]
+        }]
+    },
+    "dry_run": false
+}
+```
+
+### Child Theme Functions Append
+```json
+// POST /claude/v3/child-theme/functions/append
+{
+    "name": "custom-login-logo",
+    "code": "add_action('login_head', function() { echo '<style>.login h1 a { background-image: url(/logo.svg); }</style>'; });",
+    "dry_run": false
+}
+```
+Creates tagged block: `// === LOIQ-AGENT:custom-login-logo START/END ===`
+
+### Menu Create + Items
+```json
+// POST /claude/v3/menu/create
+{"name": "Hoofdmenu", "dry_run": false}
+
+// POST /claude/v3/menu/items/add
+{
+    "menu_id": 5,
+    "items": [
+        {"type": "page", "object_id": 42, "position": 1},
+        {"type": "custom", "title": "Blog", "url": "/blog", "position": 2},
+        {"type": "page", "object_id": 55, "parent_item_id": 42, "position": 1}
+    ],
+    "dry_run": false
+}
+```
+
+### Media Upload
+```json
+// POST /claude/v3/media/upload
+{
+    "source": "url",
+    "url": "https://example.com/image.jpg",
+    "filename": "hero-image.jpg",
+    "alt": "Hero afbeelding",
+    "dry_run": false
+}
+```
+
+### Gravity Forms Create
+```json
+// POST /claude/v3/forms/create
+{
+    "form": {
+        "title": "Contact Formulier",
+        "fields": [
+            {"type": "name", "label": "Naam", "isRequired": true},
+            {"type": "email", "label": "E-mail", "isRequired": true},
+            {"type": "textarea", "label": "Bericht", "isRequired": true}
+        ]
+    },
+    "dry_run": false
+}
+```
+
+### FacetWP Create
+```json
+// POST /claude/v3/facet/create
+{
+    "facet": {
+        "name": "vacature_locatie",
+        "label": "Locatie",
+        "type": "dropdown",
+        "source": "tax/locatie"
+    },
+    "dry_run": false
+}
+```
+
+### Theme Builder Create
+```json
+// POST /claude/v3/theme-builder/create
+{
+    "title": "Blog Template",
+    "areas": {
+        "header": "[et_pb_section]...[/et_pb_section]",
+        "body": "[et_pb_section]...[/et_pb_section]",
+        "footer": "[et_pb_section]...[/et_pb_section]"
+    },
+    "dry_run": false
+}
+```
+
+---
+
+## Write Endpoint Details (v2)
 
 ### CSS Deploy
 ```json
@@ -146,7 +363,9 @@ Whitelisted: blogname, blogdescription, timezone_string, date_format, time_forma
 
 ### Power Modes (fail-closed)
 - Default: alles **uitgeschakeld**
-- Per-categorie: css, options, plugins, content, snippets
+- Per-categorie (11 totaal):
+  - v2: `css`, `options`, `plugins`, `content`, `snippets`
+  - v3: `divi_builder`, `child_theme`, `menus`, `media`, `forms`, `facets`
 - Timer verlopen = alles geblokkeerd (ongeacht power mode setting)
 - Toggelbaar via wp-admin UI
 
@@ -162,6 +381,18 @@ Whitelisted: blogname, blogdescription, timezone_string, date_format, time_forma
 - Max 5 actieve snippets
 - ABSPATH check auto-injected
 - Deployed als mu-plugin: `/wp-content/mu-plugins/loiq-snippet-{name}.php`
+
+### Child Theme Veiligheid (v3)
+- PHP syntax check (`php -l`) voor elke append
+- Dangerous pattern scan (hergebruik snippet scanner)
+- Max 100KB bestandsgrootte voor functions.php
+- Tagged blocks: `// === LOIQ-AGENT:{name} START/END ===`
+- Snapshot van hele functions.php voor rollback
+
+### Media Veiligheid (v3)
+- Max 5MB upload
+- Alleen image/* MIME types
+- Rate limit van toepassing
 
 ### Option Whitelist
 Deny-by-default. Alleen veilige opties toegestaan. NOOIT: siteurl, home, admin_email, users_can_register, db_*, secret_*.
@@ -185,10 +416,11 @@ Deny-by-default. Alleen veilige opties toegestaan. NOOIT: siteurl, home, admin_e
 | Managed logging | mu-plugin toggled WP_DEBUG_LOG via timer |
 | IP whitelist | Optioneel in admin |
 | Logging | Database met GDPR IP anonimisatie |
-| Power modes | Per-categorie, fail-closed |
+| Power modes | 11 categorieën, fail-closed |
 | Snapshots | Pre-edit met rollback |
 | Dry-run | Preview changes zonder uitvoeren |
 | Snippet scanner | Blokkeert gevaarlijke PHP patronen |
+| PHP syntax check | Valideert child theme code voor deployment |
 
 ---
 
@@ -196,12 +428,38 @@ Deny-by-default. Alleen veilige opties toegestaan. NOOIT: siteurl, home, admin_e
 
 | File | Doel |
 |------|------|
-| `loiq-wp-agent.php` | Entry point, v1 read endpoints, admin UI, permission checks |
-| `includes/class-write-endpoints.php` | Alle v2 write + management endpoint handlers |
-| `includes/class-safeguards.php` | Power modes, snapshots, dry-run, rollback, snippet scanning |
-| `includes/class-audit.php` | Extended audit trail voor write operaties |
+| `loiq-wp-agent.php` | Entry point, v1 read endpoints, admin UI, permission checks, route registration |
+| `includes/class-write-endpoints.php` | v2 write + management endpoint handlers |
+| `includes/class-safeguards.php` | Power modes (11), snapshots, dry-run, rollback, snippet scanning |
+| `includes/class-audit.php` | Extended audit trail voor alle write operaties |
+| `includes/class-divi-builder.php` | Divi JSON↔shortcode builder, parser, validator, module registry |
+| `includes/class-divi-theme-builder.php` | Theme Builder CRUD, Divi Library management |
+| `includes/class-page-endpoints.php` | Pagina create, clone, list met template support |
+| `includes/class-child-theme.php` | functions.php tagged block CRUD met safeguards |
+| `includes/class-menu-endpoints.php` | WP menus + Max Mega Menu configuratie |
+| `includes/class-media-endpoints.php` | Media upload (base64/URL) + search |
+| `includes/class-forms-endpoints.php` | Gravity Forms CRUD via GFAPI |
+| `includes/class-facet-endpoints.php` | FacetWP facet + template management |
+| `includes/class-taxonomy-endpoints.php` | Taxonomy/term management |
+| `templates/*.json` | 6 Divi page templates (homepage, diensten, contact, over-ons, blog-single, landing-page) |
 | `uninstall.php` | Cleanup bij verwijderen (tabellen, options, mu-plugins, snippets) |
-| `mu-plugins/loiq-agent-logging.php` | Auto-generated, toggled WP_DEBUG_LOG via timer |
+
+---
+
+## Page Templates (v3)
+
+Beschikbaar via `/claude/v3/divi/templates` en `/claude/v3/page/create?template=X`.
+
+| Template | Beschrijving | Secties |
+|----------|-------------|---------|
+| `homepage` | Standaard homepage | Hero, features (3-col), about (2-col), testimonials, CTA |
+| `diensten` | Diensten overzicht | Header, diensten grid (2x3), CTA |
+| `contact` | Contactpagina | Header, formulier + contactgegevens, Google Maps |
+| `over-ons` | Over ons | Header, verhaal (2-col), kernwaarden (4-col), team (3-col) |
+| `blog-single` | Blog overzicht | Header, blog module + sidebar |
+| `landing-page` | Conversie landing page | Fullwidth hero, voordelen (3-col), social proof counters, testimonial, CTA |
+
+Templates gebruiken placeholders: `{{site_name}}`, `{{tagline}}`, `{{headline}}`, `{{admin_email}}`, `{{domain}}`, `{{placeholder_image}}`.
 
 ---
 
@@ -211,10 +469,11 @@ Deny-by-default. Alleen veilige opties toegestaan. NOOIT: siteurl, home, admin_e
 - Token regenereren
 - Timer verlengen (1u/24u/1 week)
 - IP whitelist beheer
-- **Power Modes toggles** (per-categorie write permissions)
+- **Power Modes toggles** (11 categorieën: 5 v2 + 6 v3)
 - **Recente Snapshots** (met rollback buttons)
 - **Gedeployde Snippets** (met verwijder buttons)
 - Request log viewer
+- **v3 Endpoint documentatie** (inline reference table)
 
 ---
 
@@ -233,7 +492,54 @@ Deny-by-default. Alleen veilige opties toegestaan. NOOIT: siteurl, home, admin_e
 
 ---
 
+## Divi Module Registry (v3)
+
+De `divi/modules` endpoint retourneert 35+ modules met hun attributen en voorbeelden:
+
+**Structuur:** `section`, `row`, `column`, `fullwidth_section`
+**Content:** `text`, `image`, `video`, `code`, `divider`
+**Interactie:** `button`, `cta`, `contact_form`, `contact_field`, `login`
+**Media:** `gallery`, `video`, `video_slider`, `audio`, `map`, `map_pin`
+**Layout:** `blurb`, `slider`, `slide`, `testimonial`, `tabs`, `tab`, `accordion`, `accordion_item`, `toggle`
+**Data:** `number_counter`, `circle_counter`, `countdown_timer`, `bar_counter`, `bar_counters_item`
+**Social:** `social_media_follow`, `social_media_follow_network`
+**Blog:** `blog`, `post_title`, `post_content`, `comments`
+**Fullwidth:** `fullwidth_header`, `fullwidth_image`, `fullwidth_slider`, `fullwidth_code`, `fullwidth_menu`
+**Navigation:** `sidebar`, `menu`, `search`
+
+---
+
+## Site Build Workflow
+
+Typische flow voor het bouwen van een complete site:
+
+1. **Pagina's aanmaken:** `page/create` met templates (homepage, diensten, contact, over-ons)
+2. **Content aanpassen:** `v2/content/update` of `divi/build` → `content/update`
+3. **Menu bouwen:** `menu/create` → `menu/items/add` → `menu/assign`
+4. **Theme Builder:** `theme-builder/create` → `theme-builder/assign` (header/footer)
+5. **Formulieren:** `forms/create` → embed shortcode in pagina
+6. **Media:** `media/upload` → gebruik URL in Divi content
+7. **Child theme:** `child-theme/functions/append` voor custom PHP
+8. **Facets:** `facet/create` → `facet/template` voor filtering
+9. **CSS:** `v2/css/deploy` voor fijntuning
+
+---
+
 ## Learnings
+
+### v3.0.0
+- Site builder met 9 nieuwe endpoint classes en 40+ REST endpoints
+- Divi JSON↔shortcode bidirectionele conversie met module registry (35+ modules)
+- Theme Builder CRUD (et_template, header/body/footer layouts, condities)
+- Child theme functions.php management met tagged blocks en PHP syntax check
+- Menu management inclusief Max Mega Menu configuratie
+- Media upload met base64 en URL support (5MB max, image/* only)
+- Gravity Forms CRUD via GFAPI
+- FacetWP facet en template management
+- Taxonomy/term CRUD
+- 6 page templates als JSON (homepage, diensten, contact, over-ons, blog-single, landing-page)
+- 6 nieuwe power modes (fail-closed): divi_builder, child_theme, menus, media, forms, facets
+- Snapshot/rollback uitgebreid voor alle v3 domeinen
 
 ### v2.0.0
 - Write endpoints met per-categorie power modes (fail-closed)

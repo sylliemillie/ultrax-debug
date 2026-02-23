@@ -14,11 +14,17 @@ class LOIQ_Agent_Safeguards {
 
     /** Default power modes — all off (fail-closed) */
     private static $default_modes = [
-        'css'      => false,
-        'options'  => false,
-        'plugins'  => false,
-        'content'  => false,
-        'snippets' => false,
+        'css'          => false,
+        'options'      => false,
+        'plugins'      => false,
+        'content'      => false,
+        'snippets'     => false,
+        'divi_builder' => false,
+        'child_theme'  => false,
+        'menus'        => false,
+        'media'        => false,
+        'forms'        => false,
+        'facets'       => false,
     ];
 
     /** Write rate limits */
@@ -260,6 +266,83 @@ class LOIQ_Agent_Safeguards {
                 } else {
                     // Restore previous content
                     file_put_contents($mu_file, $before_value);
+                }
+                return true;
+
+            case 'divi':
+            case 'theme_builder':
+                // before_value = post data array with post_content, meta, etc.
+                $post_id = (int) $target_key;
+                if ($post_id <= 0) {
+                    return new WP_Error('invalid_post', 'Ongeldige post ID voor Divi rollback', ['status' => 400]);
+                }
+                if (!empty($before_value['post'])) {
+                    wp_update_post($before_value['post']);
+                }
+                if (!empty($before_value['meta'])) {
+                    foreach ($before_value['meta'] as $key => $val) {
+                        update_post_meta($post_id, $key, $val);
+                    }
+                }
+                return true;
+
+            case 'child_theme':
+                // before_value = full functions.php content
+                $functions_file = get_stylesheet_directory() . '/functions.php';
+                if (!is_writable($functions_file) && !is_writable(dirname($functions_file))) {
+                    return new WP_Error('not_writable', 'functions.php is niet schrijfbaar', ['status' => 500]);
+                }
+                file_put_contents($functions_file, $before_value);
+                return true;
+
+            case 'menu':
+                // before_value = menu items array or menu term data
+                if (!empty($before_value['items']) && is_array($before_value['items'])) {
+                    foreach ($before_value['items'] as $item) {
+                        if (!empty($item['ID'])) {
+                            wp_update_post($item);
+                        }
+                    }
+                }
+                if (!empty($before_value['locations'])) {
+                    set_theme_mod('nav_menu_locations', $before_value['locations']);
+                }
+                return true;
+
+            case 'media':
+                // before_value = null (new upload) — delete the attachment
+                $attachment_id = (int) $target_key;
+                if ($before_value === null && $attachment_id > 0) {
+                    wp_delete_attachment($attachment_id, true);
+                }
+                return true;
+
+            case 'form':
+                // before_value = form array or null
+                if (class_exists('GFAPI')) {
+                    $form_id = (int) $target_key;
+                    if ($before_value === null) {
+                        GFAPI::delete_form($form_id);
+                    } else {
+                        GFAPI::update_form($before_value, $form_id);
+                    }
+                }
+                return true;
+
+            case 'facet':
+                // before_value = FacetWP options array
+                if ($before_value !== null) {
+                    update_option('facetwp_settings', $before_value);
+                }
+                return true;
+
+            case 'taxonomy':
+                // before_value = null (new term) — delete the term
+                if ($before_value === null) {
+                    $parts = explode(':', $target_key);
+                    if (count($parts) === 2) {
+                        wp_delete_term((int) $parts[1], $parts[0]);
+                    }
                 }
                 return true;
 

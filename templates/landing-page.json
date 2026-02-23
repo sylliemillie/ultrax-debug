@@ -1,0 +1,265 @@
+{
+  "name": "Landing Page",
+  "description": "Conversie-gerichte landing page met hero, voordelen, social proof en CTA",
+  "sections": [
+    {
+      "type": "fullwidth_section",
+      "children": [
+        {
+          "type": "fullwidth_header",
+          "settings": {
+            "title": "{{headline}}",
+            "subhead": "{{subheadline}}",
+            "text_orientation": "center",
+            "header_fullscreen": "off",
+            "button_one_text": "Start nu",
+            "button_one_url": "#cta",
+            "background_overlay_color": "rgba(0,0,0,0.5)"
+          },
+          "content": ""
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "settings": {
+        "admin_label": "Voordelen"
+      },
+      "children": [
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_1"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_1"},
+              "children": [
+                {
+                  "type": "text",
+                  "settings": {"text_orientation": "center"},
+                  "content": "<h2>Waarom kiezen voor ons?</h2>"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_3,1_3,1_3"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "blurb",
+                  "settings": {
+                    "title": "Voordeel 1",
+                    "use_icon": "on",
+                    "font_icon": "%%51%%",
+                    "icon_placement": "top"
+                  },
+                  "content": "<p>Beschrijf hier het eerste voordeel voor de bezoeker.</p>"
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "blurb",
+                  "settings": {
+                    "title": "Voordeel 2",
+                    "use_icon": "on",
+                    "font_icon": "%%51%%",
+                    "icon_placement": "top"
+                  },
+                  "content": "<p>Beschrijf hier het tweede voordeel voor de bezoeker.</p>"
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "blurb",
+                  "settings": {
+                    "title": "Voordeel 3",
+                    "use_icon": "on",
+                    "font_icon": "%%51%%",
+                    "icon_placement": "top"
+                  },
+                  "content": "<p>Beschrijf hier het derde voordeel voor de bezoeker.</p>"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "settings": {
+        "admin_label": "Social Proof",
+        "background_color": "#f9f9f9"
+      },
+      "children": [
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_1"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_1"},
+              "children": [
+                {
+                  "type": "text",
+                  "settings": {"text_orientation": "center"},
+                  "content": "<h2>Vertrouwd door 500+ klanten</h2>"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_4,1_4,1_4,1_4"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_4"},
+              "children": [
+                {
+                  "type": "number_counter",
+                  "settings": {
+                    "title": "Tevreden klanten",
+                    "number": "500",
+                    "percent_sign": "off"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_4"},
+              "children": [
+                {
+                  "type": "number_counter",
+                  "settings": {
+                    "title": "Projecten afgerond",
+                    "number": "1200",
+                    "percent_sign": "off"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_4"},
+              "children": [
+                {
+                  "type": "number_counter",
+                  "settings": {
+                    "title": "Jaar ervaring",
+                    "number": "15",
+                    "percent_sign": "off"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_4"},
+              "children": [
+                {
+                  "type": "number_counter",
+                  "settings": {
+                    "title": "Klanttevredenheid",
+                    "number": "98",
+                    "percent_sign": "on"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "settings": {
+        "admin_label": "Testimonial"
+      },
+      "children": [
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_1"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_1"},
+              "children": [
+                {
+                  "type": "testimonial",
+                  "settings": {
+                    "author": "Klant Naam",
+                    "job_title": "CEO",
+                    "company_name": "Bedrijfsnaam",
+                    "quote_icon": "on"
+                  },
+                  "content": "<p>Een krachtige testimonial die het resultaat benadrukt dat de klant heeft behaald.</p>"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "settings": {
+        "admin_label": "CTA",
+        "module_id": "cta",
+        "background_color": "#2d2d2d"
+      },
+      "children": [
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_1"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_1"},
+              "children": [
+                {
+                  "type": "cta",
+                  "settings": {
+                    "title": "Klaar om te beginnen?",
+                    "button_text": "Start nu gratis",
+                    "button_url": "#",
+                    "use_background_color": "off"
+                  },
+                  "content": "<p>Geen verplichtingen. Geen risico. Start vandaag nog.</p>"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

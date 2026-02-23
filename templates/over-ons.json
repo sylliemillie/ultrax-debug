@@ -1,0 +1,251 @@
+{
+  "name": "Over Ons",
+  "description": "Over ons pagina met bedrijfsverhaal, team en kernwaarden",
+  "sections": [
+    {
+      "type": "section",
+      "settings": {
+        "admin_label": "Header"
+      },
+      "children": [
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_1"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_1"},
+              "children": [
+                {
+                  "type": "text",
+                  "settings": {"text_orientation": "center"},
+                  "content": "<h1>Over Ons</h1><p>Leer ons kennen — ons verhaal, ons team en onze waarden.</p>"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "settings": {
+        "admin_label": "Ons Verhaal"
+      },
+      "children": [
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_2,1_2"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_2"},
+              "children": [
+                {
+                  "type": "text",
+                  "settings": {},
+                  "content": "<h2>Ons Verhaal</h2><p>Beschrijf hier de geschiedenis en het ontstaan van uw bedrijf. Wat was de aanleiding, welke uitdagingen heeft u overwonnen, en waar staat u nu?</p><p>Vertel over uw passie en wat u drijft om elke dag het beste te geven voor uw klanten.</p>"
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_2"},
+              "children": [
+                {
+                  "type": "image",
+                  "settings": {
+                    "src": "{{placeholder_image}}",
+                    "alt": "Ons verhaal",
+                    "force_fullwidth": "on"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "settings": {
+        "admin_label": "Kernwaarden",
+        "background_color": "#f7f7f7"
+      },
+      "children": [
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_1"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_1"},
+              "children": [
+                {
+                  "type": "text",
+                  "settings": {"text_orientation": "center"},
+                  "content": "<h2>Onze Kernwaarden</h2>"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_4,1_4,1_4,1_4"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_4"},
+              "children": [
+                {
+                  "type": "blurb",
+                  "settings": {
+                    "title": "Kwaliteit",
+                    "use_icon": "on",
+                    "font_icon": "%%170%%",
+                    "icon_placement": "top"
+                  },
+                  "content": "<p>Wij leveren altijd de hoogste kwaliteit.</p>"
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_4"},
+              "children": [
+                {
+                  "type": "blurb",
+                  "settings": {
+                    "title": "Betrouwbaarheid",
+                    "use_icon": "on",
+                    "font_icon": "%%109%%",
+                    "icon_placement": "top"
+                  },
+                  "content": "<p>U kunt altijd op ons rekenen.</p>"
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_4"},
+              "children": [
+                {
+                  "type": "blurb",
+                  "settings": {
+                    "title": "Innovatie",
+                    "use_icon": "on",
+                    "font_icon": "%%236%%",
+                    "icon_placement": "top"
+                  },
+                  "content": "<p>Wij blijven voorop lopen.</p>"
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_4"},
+              "children": [
+                {
+                  "type": "blurb",
+                  "settings": {
+                    "title": "Klantgericht",
+                    "use_icon": "on",
+                    "font_icon": "%%155%%",
+                    "icon_placement": "top"
+                  },
+                  "content": "<p>De klant staat altijd centraal.</p>"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "settings": {
+        "admin_label": "Team"
+      },
+      "children": [
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_1"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_1"},
+              "children": [
+                {
+                  "type": "text",
+                  "settings": {"text_orientation": "center"},
+                  "content": "<h2>Ons Team</h2><p>De mensen achter {{site_name}}.</p>"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "row",
+          "settings": {
+            "column_structure": "1_3,1_3,1_3"
+          },
+          "children": [
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "blurb",
+                  "settings": {
+                    "title": "Naam Medewerker",
+                    "icon_placement": "top"
+                  },
+                  "content": "<p><em>Functie</em></p><p>Korte bio van dit teamlid.</p>"
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "blurb",
+                  "settings": {
+                    "title": "Naam Medewerker",
+                    "icon_placement": "top"
+                  },
+                  "content": "<p><em>Functie</em></p><p>Korte bio van dit teamlid.</p>"
+                }
+              ]
+            },
+            {
+              "type": "column",
+              "settings": {"type": "1_3"},
+              "children": [
+                {
+                  "type": "blurb",
+                  "settings": {
+                    "title": "Naam Medewerker",
+                    "icon_placement": "top"
+                  },
+                  "content": "<p><em>Functie</em></p><p>Korte bio van dit teamlid.</p>"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
