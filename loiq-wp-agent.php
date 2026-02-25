@@ -2,7 +2,7 @@
 /**
  * Plugin Name: LOIQ WordPress Agent
  * Description: Beveiligde REST API endpoints voor Claude CLI site debugging + write capabilities met safeguards.
- * Version: 3.0.2
+ * Version: 3.1.0
  * Update URI: https://github.com/LOIQ-ai/loiq-wp-assistent
  * Author: LOIQ
  * Author URI: https://loiq.nl
@@ -12,10 +12,13 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('LOIQ_AGENT_VERSION', '3.0.2');
+define('LOIQ_AGENT_VERSION', '3.1.0');
 define('LOIQ_AGENT_DB_VERSION', '2.0.0');
 define('LOIQ_AGENT_GITHUB_REPO', 'LOIQ-ai/loiq-wp-assistent');
 define('LOIQ_AGENT_PATH', plugin_dir_path(__FILE__));
+
+// Load v1.0 read endpoints
+require_once LOIQ_AGENT_PATH . 'includes/class-read-endpoints.php';
 
 // Load v2.0 includes
 require_once LOIQ_AGENT_PATH . 'includes/class-safeguards.php';
@@ -93,6 +96,9 @@ class LOIQ_WP_Agent {
 
         // Remove mu-plugin
         self::remove_mu_plugin();
+
+        // Clear scheduled cron events
+        wp_clear_scheduled_hook('loiq_agent_prune_snapshots');
     }
 
     /**
@@ -271,6 +277,20 @@ MUPHP;
 
         // Hide plugin from plugins list for non-allowed users
         add_filter('all_plugins', [$this, 'filter_plugin_visibility']);
+
+        // Snapshot retention: prune >30 days daily
+        add_action('loiq_agent_prune_snapshots', [__CLASS__, 'cron_prune_snapshots']);
+        if (!wp_next_scheduled('loiq_agent_prune_snapshots')) {
+            wp_schedule_event(time(), 'daily', 'loiq_agent_prune_snapshots');
+        }
+    }
+
+    /**
+     * WP Cron callback: prune old snapshots.
+     * @since 3.1.0
+     */
+    public static function cron_prune_snapshots() {
+        LOIQ_Agent_Safeguards::prune_snapshots(30);
     }
 
     /**
@@ -298,120 +318,8 @@ MUPHP;
      * Register REST API routes
      */
     public function register_routes() {
-        $namespace = 'claude/v1';
-
-        // status - no args
-        register_rest_route($namespace, '/status', [
-            'methods'             => 'GET',
-            'callback'            => [$this, 'get_status'],
-            'permission_callback' => [$this, 'check_permission'],
-            'args'                => [],
-        ]);
-
-        // errors - optional lines param
-        register_rest_route($namespace, '/errors', [
-            'methods'             => 'GET',
-            'callback'            => [$this, 'get_errors'],
-            'permission_callback' => [$this, 'check_permission'],
-            'args'                => [
-                'lines' => [
-                    'required'          => false,
-                    'type'              => 'integer',
-                    'default'           => 50,
-                    'minimum'           => 1,
-                    'maximum'           => 500,
-                    'sanitize_callback' => 'absint',
-                ],
-            ],
-        ]);
-
-        // plugins - no args
-        register_rest_route($namespace, '/plugins', [
-            'methods'             => 'GET',
-            'callback'            => [$this, 'get_plugins'],
-            'permission_callback' => [$this, 'check_permission'],
-            'args'                => [],
-        ]);
-
-        // theme - no args
-        register_rest_route($namespace, '/theme', [
-            'methods'             => 'GET',
-            'callback'            => [$this, 'get_theme'],
-            'permission_callback' => [$this, 'check_permission'],
-            'args'                => [],
-        ]);
-
-        // database - no args
-        register_rest_route($namespace, '/database', [
-            'methods'             => 'GET',
-            'callback'            => [$this, 'get_database'],
-            'permission_callback' => [$this, 'check_permission'],
-            'args'                => [],
-        ]);
-
-        // code-context - optional topic param
-        register_rest_route($namespace, '/code-context', [
-            'methods'             => 'GET',
-            'callback'            => [$this, 'get_code_context'],
-            'permission_callback' => [$this, 'check_permission'],
-            'args'                => [
-                'topic' => [
-                    'required'          => false,
-                    'type'              => 'string',
-                    'default'           => 'general',
-                    'sanitize_callback' => 'sanitize_text_field',
-                    'validate_callback' => function($param) {
-                        $allowed = ['gravity-forms', 'woocommerce', 'divi', 'acf', 'custom-post-types', 'rest-api', 'cron', 'general'];
-                        return in_array($param, $allowed, true);
-                    },
-                ],
-            ],
-        ]);
-
-        // styles - no args
-        register_rest_route($namespace, '/styles', [
-            'methods'             => 'GET',
-            'callback'            => [$this, 'get_styles'],
-            'permission_callback' => [$this, 'check_permission'],
-            'args'                => [],
-        ]);
-
-        // forms - optional id param
-        register_rest_route($namespace, '/forms', [
-            'methods'             => 'GET',
-            'callback'            => [$this, 'get_forms_detail'],
-            'permission_callback' => [$this, 'check_permission'],
-            'args'                => [
-                'id' => [
-                    'required'          => false,
-                    'type'              => 'integer',
-                    'default'           => 0,
-                    'minimum'           => 0,
-                    'sanitize_callback' => 'absint',
-                ],
-            ],
-        ]);
-
-        // page - optional url and id params
-        register_rest_route($namespace, '/page', [
-            'methods'             => 'GET',
-            'callback'            => [$this, 'get_page_context'],
-            'permission_callback' => [$this, 'check_permission'],
-            'args'                => [
-                'url' => [
-                    'required'          => false,
-                    'type'              => 'string',
-                    'sanitize_callback' => 'sanitize_text_field',
-                ],
-                'id' => [
-                    'required'          => false,
-                    'type'              => 'integer',
-                    'default'           => 0,
-                    'minimum'           => 0,
-                    'sanitize_callback' => 'absint',
-                ],
-            ],
-        ]);
+        // Register v1 read endpoints
+        LOIQ_Agent_Read_Endpoints::register_routes($this);
 
         // Register v2 write + management endpoints
         LOIQ_Agent_Write_Endpoints::register_routes($this);
@@ -497,14 +405,14 @@ MUPHP;
         // 1. HTTPS check (allow localhost for dev)
         $is_localhost = in_array(sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? '')), ['127.0.0.1', '::1']);
         if (!is_ssl() && !$is_localhost) {
-            $this->log_request($request->get_route(), 403);
+            $this->log_request($request->get_route(), 403, 'https_required');
             return new WP_Error('https_required', 'HTTPS is verplicht', ['status' => 403]);
         }
 
         // 2. Auto-disable check
         $enabled_until = (int) get_option('loiq_agent_enabled_until', 0);
         if ($enabled_until > 0 && time() > $enabled_until) {
-            $this->log_request($request->get_route(), 503);
+            $this->log_request($request->get_route(), 503, 'timer_expired');
             return new WP_Error('disabled', 'Debug endpoint is uitgeschakeld (timer verlopen)', ['status' => 503]);
         }
 
@@ -513,7 +421,7 @@ MUPHP;
         $lockout_key = 'loiq_agent_lockout_' . md5($client_ip_for_lockout);
         $failed_attempts = (int) get_transient($lockout_key);
         if ($failed_attempts >= 5) {
-            $this->log_request($request->get_route(), 403);
+            $this->log_request($request->get_route(), 403, 'auth_lockout:' . $failed_attempts);
             return new WP_Error('auth_lockout', 'Te veel mislukte pogingen. Probeer over 15 minuten opnieuw.', ['status' => 403]);
         }
 
@@ -526,7 +434,7 @@ MUPHP;
             $hash = get_option('loiq_agent_token_hash', '');
             if (empty($hash) || !password_verify($token, $hash)) {
                 set_transient($lockout_key, $failed_attempts + 1, 900);
-                $this->log_request($request->get_route(), 401);
+                $this->log_request($request->get_route(), 401, 'invalid_token');
                 return new WP_Error('invalid_token', 'Ongeldig token', ['status' => 401]);
             }
             $authenticated = true;
@@ -540,7 +448,7 @@ MUPHP;
 
         if (!$authenticated) {
             set_transient($lockout_key, $failed_attempts + 1, 900);
-            $this->log_request($request->get_route(), 401);
+            $this->log_request($request->get_route(), 401, 'missing_token');
             return new WP_Error('missing_token', 'X-Claude-Token header of geldige WP authenticatie vereist', ['status' => 401]);
         }
 
@@ -553,7 +461,7 @@ MUPHP;
             $allowed_ips = array_map('trim', explode("\n", $whitelist));
             $client_ip = $this->get_client_ip();
             if (!in_array($client_ip, $allowed_ips)) {
-                $this->log_request($request->get_route(), 403);
+                $this->log_request($request->get_route(), 403, 'ip_blocked');
                 return new WP_Error('ip_blocked', 'IP niet toegestaan', ['status' => 403]);
             }
         }
@@ -566,7 +474,7 @@ MUPHP;
         $minute_key = 'loiq_agent_rate_m_' . $ip_hash;
         $minute_count = (int) get_transient($minute_key);
         if ($minute_count >= self::RATE_LIMIT_MINUTE) {
-            $this->log_request($request->get_route(), 429);
+            $this->log_request($request->get_route(), 429, 'rate_limit_minute');
             return new WP_Error('rate_limit', 'Te veel requests (max ' . self::RATE_LIMIT_MINUTE . '/min)', ['status' => 429]);
         }
 
@@ -574,7 +482,7 @@ MUPHP;
         $hour_key = 'loiq_agent_rate_h_' . $ip_hash;
         $hour_count = (int) get_transient($hour_key);
         if ($hour_count >= self::RATE_LIMIT_HOUR) {
-            $this->log_request($request->get_route(), 429);
+            $this->log_request($request->get_route(), 429, 'rate_limit_hour');
             return new WP_Error('rate_limit', 'Te veel requests (max ' . self::RATE_LIMIT_HOUR . '/uur)', ['status' => 429]);
         }
 
@@ -617,9 +525,14 @@ MUPHP;
     }
 
     /**
-     * Log request to database
+     * Log request to database.
+     * For auth failures (401/403), also logs to a separate auth audit trail.
+     *
+     * @param string $endpoint
+     * @param int    $response_code
+     * @param string $reason  Optional reason for auth failures
      */
-    private function log_request($endpoint, $response_code) {
+    private function log_request($endpoint, $response_code, $reason = '') {
         global $wpdb;
         $table = $wpdb->prefix . 'loiq_agent_log';
 
@@ -633,656 +546,34 @@ MUPHP;
             'response_code' => (int) $response_code,
             'created_at'    => current_time('mysql'),
         ], ['%s', '%s', '%d', '%s']);
-    }
 
-    // =========================================================================
-    // REST ENDPOINTS
-    // =========================================================================
-
-    /**
-     * GET /claude/v1/status - Site health info
-     */
-    public function get_status() {
-        global $wpdb;
-
-        return [
-            'site_url'       => get_site_url(),
-            'wp_version'     => get_bloginfo('version'),
-            'php_version'    => PHP_VERSION,
-            'mysql_version'  => $wpdb->db_version(),
-            'memory_limit'   => WP_MEMORY_LIMIT,
-            'debug_mode'     => WP_DEBUG,
-            'debug_log'      => defined('WP_DEBUG_LOG') && WP_DEBUG_LOG,
-            'multisite'      => is_multisite(),
-            'ssl'            => is_ssl(),
-            'timezone'       => wp_timezone_string(),
-            'active_plugins' => count(get_option('active_plugins', [])),
-            'post_count'     => wp_count_posts()->publish ?? 0,
-            'page_count'     => wp_count_posts('page')->publish ?? 0,
-            'user_count'     => count_users()['total_users'] ?? 0,
-        ];
-    }
-
-    /**
-     * GET /claude/v1/errors - Last N lines from debug.log
-     */
-    public function get_errors(WP_REST_Request $request) {
-        $lines = (int) $request->get_param('lines') ?: 50;
-        $lines = min($lines, 500); // Max 500 lines
-
-        $log_file = WP_CONTENT_DIR . '/debug.log';
-
-        if (!file_exists($log_file)) {
-            return [
-                'exists'  => false,
-                'message' => 'debug.log niet gevonden. Zet WP_DEBUG_LOG aan in wp-config.php',
-            ];
+        // Auth failure audit trail (401, 403, 429)
+        if (in_array($response_code, [401, 403, 429], true)) {
+            $this->log_auth_event($endpoint, $response_code, $ip, $reason);
         }
-
-        // Read last N lines efficiently
-        $file = new SplFileObject($log_file, 'r');
-        $file->seek(PHP_INT_MAX);
-        $total_lines = $file->key();
-
-        $start = max(0, $total_lines - $lines);
-        $file->seek($start);
-
-        $log_lines = [];
-        while (!$file->eof()) {
-            $line = trim($file->current());
-            if (!empty($line)) {
-                $log_lines[] = $line;
-            }
-            $file->next();
-        }
-
-        return [
-            'exists'      => true,
-            'total_lines' => $total_lines,
-            'returned'    => count($log_lines),
-            'lines'       => $log_lines,
-        ];
     }
 
     /**
-     * GET /claude/v1/plugins - Plugin list with update status
+     * Log auth-related events to options for admin visibility.
+     * Keeps last 50 events in a rolling buffer.
+     *
+     * @since 3.1.0
      */
-    public function get_plugins() {
-        if (!function_exists('get_plugins')) {
-            require_once ABSPATH . 'wp-admin/includes/plugin.php';
-        }
+    private function log_auth_event($endpoint, $code, $ip, $reason) {
+        $events = get_option('loiq_agent_auth_events', []);
+        if (!is_array($events)) $events = [];
 
-        $all_plugins = get_plugins();
-        $active_plugins = get_option('active_plugins', []);
-
-        // Get update info
-        $updates = get_site_transient('update_plugins');
-        $update_list = $updates->response ?? [];
-
-        $result = [];
-        foreach ($all_plugins as $file => $data) {
-            $result[] = [
-                'file'        => $file,
-                'name'        => $data['Name'],
-                'version'     => $data['Version'],
-                'active'      => in_array($file, $active_plugins),
-                'update'      => isset($update_list[$file]) ? $update_list[$file]->new_version : null,
-                'author'      => strip_tags($data['Author']),
-                'requires_wp' => $data['RequiresWP'] ?? null,
-                'requires_php'=> $data['RequiresPHP'] ?? null,
-            ];
-        }
-
-        return [
-            'total'  => count($result),
-            'active' => count($active_plugins),
-            'updates'=> count($update_list),
-            'plugins'=> $result,
-        ];
-    }
-
-    /**
-     * GET /claude/v1/theme - Active theme info
-     */
-    public function get_theme() {
-        $theme = wp_get_theme();
-        $parent = $theme->parent();
-
-        // Get update info
-        $updates = get_site_transient('update_themes');
-        $update_available = isset($updates->response[$theme->get_stylesheet()]);
-
-        return [
-            'name'        => $theme->get('Name'),
-            'version'     => $theme->get('Version'),
-            'author'      => $theme->get('Author'),
-            'template'    => $theme->get_template(),
-            'stylesheet'  => $theme->get_stylesheet(),
-            'is_child'    => $theme->parent() !== false,
-            'parent'      => $parent ? [
-                'name'    => $parent->get('Name'),
-                'version' => $parent->get('Version'),
-            ] : null,
-            'update'      => $update_available ? $updates->response[$theme->get_stylesheet()]['new_version'] : null,
-        ];
-    }
-
-    /**
-     * GET /claude/v1/database - Database schema info (NO data!)
-     */
-    public function get_database() {
-        global $wpdb;
-
-        // Get all tables with prefix
-        $tables = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT TABLE_NAME, TABLE_ROWS, DATA_LENGTH, INDEX_LENGTH
-                 FROM information_schema.TABLES
-                 WHERE TABLE_SCHEMA = %s AND TABLE_NAME LIKE %s",
-                DB_NAME,
-                $wpdb->prefix . '%'
-            )
-        );
-
-        $result = [];
-        $total_size = 0;
-
-        foreach ($tables as $table) {
-            $size = (int) $table->DATA_LENGTH + (int) $table->INDEX_LENGTH;
-            $total_size += $size;
-
-            $result[] = [
-                'name'  => $table->TABLE_NAME,
-                'rows'  => (int) $table->TABLE_ROWS,
-                'size'  => $this->format_bytes($size),
-                'bytes' => $size,
-            ];
-        }
-
-        return [
-            'prefix'      => $wpdb->prefix,
-            'total_tables'=> count($result),
-            'total_size'  => $this->format_bytes($total_size),
-            'total_bytes' => $total_size,
-            'tables'      => $result,
-        ];
-    }
-
-    /**
-     * GET /claude/v1/code-context - Code context for specific topics
-     */
-    public function get_code_context(WP_REST_Request $request) {
-        $topic = sanitize_text_field($request->get_param('topic') ?: 'general');
-
-        // Topic configurations
-        $topics = [
-            'gravity-forms' => [
-                'patterns' => ['gform_', 'GF_', 'gravityforms'],
-                'plugin'   => 'gravityforms/gravityforms.php',
-                'hooks'    => ['gform_after_submission', 'gform_pre_render', 'gform_field_validation', 'gform_pre_submission'],
-            ],
-            'woocommerce' => [
-                'patterns' => ['wc_', 'woocommerce_', 'WC_'],
-                'plugin'   => 'woocommerce/woocommerce.php',
-                'hooks'    => ['woocommerce_checkout_process', 'woocommerce_payment_complete', 'woocommerce_add_to_cart'],
-            ],
-            'divi' => [
-                'patterns' => ['et_', 'divi_', 'ET_Builder'],
-                'theme'    => 'Divi',
-                'hooks'    => ['et_after_main_content', 'et_before_main_content', 'et_pb_module_shortcode_attributes'],
-            ],
-            'acf' => [
-                'patterns' => ['acf/', 'acf_', 'get_field', 'the_field'],
-                'plugin'   => 'advanced-custom-fields-pro/acf.php',
-                'hooks'    => ['acf/save_post', 'acf/load_field', 'acf/update_value'],
-            ],
-            'custom-post-types' => [
-                'patterns' => ['register_post_type', 'register_taxonomy'],
-                'hooks'    => [],
-            ],
-            'rest-api' => [
-                'patterns' => ['register_rest_route', 'rest_api_init'],
-                'hooks'    => ['rest_api_init', 'rest_pre_dispatch'],
-            ],
-            'cron' => [
-                'patterns' => ['wp_schedule_event', 'wp_cron'],
-                'hooks'    => [],
-            ],
-            'general' => [
-                'patterns' => ['add_action', 'add_filter', 'do_action', 'apply_filters'],
-                'hooks'    => [],
-            ],
+        $events[] = [
+            'endpoint' => sanitize_text_field($endpoint),
+            'code'     => (int) $code,
+            'ip'       => $ip,
+            'reason'   => sanitize_text_field(substr($reason, 0, 100)),
+            'time'     => current_time('mysql'),
         ];
 
-        $config = $topics[$topic] ?? $topics['general'];
-        $result = [
-            'topic'     => $topic,
-            'available_topics' => array_keys($topics),
-        ];
-
-        // Check if related plugin is active
-        if (!empty($config['plugin'])) {
-            if (!function_exists('is_plugin_active')) {
-                require_once ABSPATH . 'wp-admin/includes/plugin.php';
-            }
-            $result['plugin_active'] = is_plugin_active($config['plugin']);
-
-            // Get plugin version
-            if ($result['plugin_active']) {
-                $plugin_data = get_plugin_data(WP_PLUGIN_DIR . '/' . $config['plugin']);
-                $result['plugin_version'] = $plugin_data['Version'] ?? 'unknown';
-            }
-        }
-
-        // Check if related theme is active
-        if (!empty($config['theme'])) {
-            $theme = wp_get_theme();
-            $result['theme_match'] = (
-                stripos($theme->get('Name'), $config['theme']) !== false ||
-                stripos($theme->get_template(), strtolower($config['theme'])) !== false
-            );
-        }
-
-        // Scan functions.php for hooks
-        $theme_dir = get_stylesheet_directory();
-        $functions_file = $theme_dir . '/functions.php';
-        $result['theme_hooks'] = [];
-
-        if (file_exists($functions_file)) {
-            $result['theme_hooks'] = $this->scan_file_for_patterns($functions_file, $config['patterns']);
-        }
-
-        // Also check child theme if exists
-        $parent_dir = get_template_directory();
-        if ($parent_dir !== $theme_dir) {
-            $parent_functions = $parent_dir . '/functions.php';
-            if (file_exists($parent_functions)) {
-                $parent_hooks = $this->scan_file_for_patterns($parent_functions, $config['patterns']);
-                foreach ($parent_hooks as $hook) {
-                    $hook['source'] = 'parent_theme';
-                    $result['theme_hooks'][] = $hook;
-                }
-            }
-        }
-
-        // Get custom functions related to topic
-        $result['custom_functions'] = $this->extract_function_names($result['theme_hooks']);
-
-        // Topic-specific data
-        if ($topic === 'gravity-forms' && class_exists('GFAPI')) {
-            $forms = GFAPI::get_forms();
-            $result['forms_count'] = count($forms);
-            $result['forms_summary'] = array_map(function($f) {
-                return [
-                    'id'           => $f['id'],
-                    'title'        => $f['title'],
-                    'is_active'    => (bool) ($f['is_active'] ?? false),
-                    'fields_count' => count($f['fields'] ?? []),
-                    'css_class'    => $f['cssClass'] ?? '',
-                ];
-            }, array_slice($forms, 0, 10));
-
-            // Active add-on feeds (Zapier, Mailchimp, etc.)
-            if (method_exists('GFAPI', 'get_feeds')) {
-                $feeds = GFAPI::get_feeds();
-                $feed_summary = [];
-                foreach (($feeds ?: []) as $feed) {
-                    if (!empty($feed['is_active'])) {
-                        $feed_summary[] = [
-                            'addon_slug' => $feed['addon_slug'] ?? 'unknown',
-                            'form_id'    => $feed['form_id'] ?? 0,
-                        ];
-                    }
-                }
-                $result['feeds'] = array_slice($feed_summary, 0, 20);
-            }
-        }
-
-        if ($topic === 'woocommerce' && function_exists('wc_get_product')) {
-            $result['product_count'] = wp_count_posts('product')->publish ?? 0;
-            $result['order_count'] = wp_count_posts('shop_order')->publish ?? 0;
-        }
-
-        if ($topic === 'acf' && function_exists('acf_get_field_groups')) {
-            $groups = acf_get_field_groups();
-            $result['field_groups'] = count($groups);
-            $result['field_group_titles'] = array_map(function($g) {
-                return $g['title'];
-            }, array_slice($groups, 0, 10));
-        }
-
-        if ($topic === 'divi') {
-            $divi_options = get_option('et_divi', []);
-            if (is_array($divi_options) && !empty($divi_options['custom_css'])) {
-                $result['custom_css_length'] = strlen($divi_options['custom_css']);
-            }
-            // Count Divi Library items
-            $library_count = wp_count_posts('et_pb_layout');
-            $result['builder_layouts'] = (int) ($library_count->publish ?? 0);
-        }
-
-        if ($topic === 'custom-post-types') {
-            $post_types = get_post_types(['_builtin' => false], 'objects');
-            $result['custom_post_types'] = [];
-            foreach ($post_types as $pt) {
-                $result['custom_post_types'][] = [
-                    'name'   => $pt->name,
-                    'label'  => $pt->label,
-                    'count'  => wp_count_posts($pt->name)->publish ?? 0,
-                ];
-            }
-        }
-
-        // Relevant documentation links
-        $docs = [
-            'gravity-forms' => 'https://docs.gravityforms.com/category/developers/',
-            'woocommerce'   => 'https://woocommerce.github.io/code-reference/',
-            'divi'          => 'https://www.elegantthemes.com/documentation/developers/',
-            'acf'           => 'https://www.advancedcustomfields.com/resources/',
-        ];
-        $result['docs_url'] = $docs[$topic] ?? null;
-
-        return $result;
-    }
-
-    /**
-     * GET /claude/v1/styles - CSS environment context
-     */
-    public function get_styles() {
-        $result = [
-            'stylesheets'    => [],
-            'customizer_css' => '',
-            'child_theme_css'=> '',
-            'divi_custom_css'=> null,
-        ];
-
-        // Registered stylesheets from wp_styles()
-        global $wp_styles;
-        if ($wp_styles instanceof WP_Styles) {
-            foreach ($wp_styles->registered as $handle => $style) {
-                $result['stylesheets'][] = [
-                    'handle'  => $handle,
-                    'src'     => $style->src ?: null,
-                    'deps'    => $style->deps,
-                    'version' => $style->ver,
-                ];
-            }
-        }
-
-        // Customizer CSS
-        $result['customizer_css'] = wp_get_custom_css();
-
-        // Child theme style.css (first 200 lines)
-        $child_css_path = get_stylesheet_directory() . '/style.css';
-        if (file_exists($child_css_path)) {
-            $lines = file($child_css_path, FILE_IGNORE_NEW_LINES);
-            $result['child_theme_css'] = implode("\n", array_slice($lines, 0, 200));
-        }
-
-        // Divi custom CSS (if Divi active)
-        $divi_options = get_option('et_divi', []);
-        if (is_array($divi_options) && !empty($divi_options['custom_css'])) {
-            $result['divi_custom_css'] = $divi_options['custom_css'];
-        }
-
-        return $result;
-    }
-
-    /**
-     * GET /claude/v1/forms - Gravity Forms detail
-     */
-    public function get_forms_detail(WP_REST_Request $request) {
-        if (!class_exists('GFAPI')) {
-            return new WP_Error('gf_not_active', 'Gravity Forms is niet actief', ['status' => 404]);
-        }
-
-        $form_id = (int) $request->get_param('id');
-
-        // Single form detail
-        if ($form_id > 0) {
-            $form = GFAPI::get_form($form_id);
-            if (!$form) {
-                return new WP_Error('form_not_found', 'Formulier niet gevonden', ['status' => 404]);
-            }
-
-            $fields = [];
-            foreach ($form['fields'] ?? [] as $field) {
-                $field_data = [
-                    'id'         => $field->id,
-                    'type'       => $field->type,
-                    'label'      => $field->label,
-                    'cssClass'   => $field->cssClass,
-                    'isRequired' => (bool) $field->isRequired,
-                ];
-                if (!empty($field->choices)) {
-                    $field_data['choices'] = array_map(function($c) {
-                        return ['text' => $c['text'], 'value' => $c['value']];
-                    }, $field->choices);
-                }
-                $fields[] = $field_data;
-            }
-
-            return [
-                'id'             => $form['id'],
-                'title'          => $form['title'],
-                'css_class'      => $form['cssClass'] ?? '',
-                'is_active'      => (bool) ($form['is_active'] ?? false),
-                'fields'         => $fields,
-                'confirmations'  => array_values(array_map(function($c) {
-                    return [
-                        'type'    => $c['type'] ?? 'message',
-                        'message' => isset($c['message']) ? wp_strip_all_tags(substr($c['message'], 0, 300)) : '',
-                    ];
-                }, $form['confirmations'] ?? [])),
-                'notifications'  => array_values(array_map(function($n) {
-                    return [
-                        'name'    => $n['name'] ?? '',
-                        'event'   => $n['event'] ?? '',
-                        'to'      => $n['toType'] ?? 'email',
-                        'subject' => $n['subject'] ?? '',
-                        'is_active' => (bool) ($n['isActive'] ?? true),
-                    ];
-                }, $form['notifications'] ?? [])),
-            ];
-        }
-
-        // All forms summary
-        $forms = GFAPI::get_forms();
-        $summary = [];
-        foreach ($forms as $form) {
-            $summary[] = [
-                'id'           => $form['id'],
-                'title'        => $form['title'],
-                'is_active'    => (bool) ($form['is_active'] ?? false),
-                'fields_count' => count($form['fields'] ?? []),
-                'entries_count'=> (int) GFAPI::count_entries($form['id']),
-            ];
-        }
-
-        return [
-            'total' => count($summary),
-            'forms' => $summary,
-        ];
-    }
-
-    /**
-     * GET /claude/v1/page - Page context by URL or ID
-     */
-    public function get_page_context(WP_REST_Request $request) {
-        $url = $request->get_param('url');
-        $post_id = (int) $request->get_param('id');
-
-        // Resolve URL to post ID
-        if (!empty($url) && $post_id === 0) {
-            $full_url = home_url($url);
-            $post_id = url_to_postid($full_url);
-        }
-
-        if ($post_id <= 0) {
-            return new WP_Error('page_not_found', 'Pagina niet gevonden. Gebruik ?url=/pad of ?id=42', ['status' => 404]);
-        }
-
-        $post = get_post($post_id);
-        if (!$post) {
-            return new WP_Error('page_not_found', 'Pagina niet gevonden', ['status' => 404]);
-        }
-
-        $result = [
-            'id'             => $post->ID,
-            'title'          => $post->post_title,
-            'slug'           => $post->post_name,
-            'status'         => $post->post_status,
-            'type'           => $post->post_type,
-            'template'       => get_page_template_slug($post->ID) ?: 'default',
-            'featured_image' => get_the_post_thumbnail_url($post->ID, 'full') ?: null,
-            'content_preview'=> wp_strip_all_tags(substr($post->post_content, 0, 500)),
-        ];
-
-        // Meta keys (filtered for sensitive data)
-        $sensitive_keys = ['password', 'secret', 'token', 'key', 'hash', 'nonce', 'auth'];
-        $all_meta = get_post_meta($post->ID);
-        $safe_meta_keys = [];
-        foreach (array_keys($all_meta) as $meta_key) {
-            $is_sensitive = false;
-            foreach ($sensitive_keys as $sensitive) {
-                if (stripos($meta_key, $sensitive) !== false) {
-                    $is_sensitive = true;
-                    break;
-                }
-            }
-            if (!$is_sensitive) {
-                $safe_meta_keys[] = $meta_key;
-            }
-        }
-        $result['meta_keys'] = $safe_meta_keys;
-
-        // Divi modules (if Divi builder content)
-        if (strpos($post->post_content, '[et_pb_') !== false) {
-            preg_match_all('/\[et_pb_(\w+)[\s\]]/', $post->post_content, $matches);
-            $result['divi_modules'] = array_values(array_unique($matches[1] ?? []));
-        }
-
-        // Yoast SEO data
-        $yoast_title = get_post_meta($post->ID, '_yoast_wpseo_title', true);
-        $yoast_desc = get_post_meta($post->ID, '_yoast_wpseo_metadesc', true);
-        if ($yoast_title || $yoast_desc) {
-            $result['yoast'] = [
-                'title'       => $yoast_title ?: null,
-                'description' => $yoast_desc ?: null,
-            ];
-        }
-
-        return $result;
-    }
-
-    /**
-     * Scan a file for patterns and return matches with context
-     */
-    private function scan_file_for_patterns($file, $patterns) {
-        $matches = [];
-        $lines = file($file, FILE_IGNORE_NEW_LINES);
-
-        foreach ($lines as $line_num => $line) {
-            foreach ($patterns as $pattern) {
-                if (stripos($line, $pattern) !== false) {
-                    // Security: filter out sensitive data
-                    if ($this->contains_sensitive_data($line)) {
-                        continue;
-                    }
-
-                    // Extract hook name if it's an add_action/add_filter
-                    $hook_name = $this->extract_hook_name($line);
-
-                    $matches[] = [
-                        'file'    => basename($file),
-                        'line'    => $line_num + 1,
-                        'hook'    => $hook_name,
-                        'snippet' => $this->sanitize_snippet($line),
-                        'source'  => 'child_theme',
-                    ];
-                    break; // Don't match same line multiple times
-                }
-            }
-        }
-
-        return array_slice($matches, 0, 50); // Max 50 matches
-    }
-
-    /**
-     * Check if line contains sensitive data
-     */
-    private function contains_sensitive_data($line) {
-        $sensitive_patterns = [
-            '/api[_-]?key/i',
-            '/secret/i',
-            '/password/i',
-            '/credential/i',
-            '/token\s*=/i',
-            '/auth/i',
-            '/private[_-]?key/i',
-            '/DB_PASSWORD/i',
-            '/DB_USER/i',
-        ];
-
-        foreach ($sensitive_patterns as $pattern) {
-            if (preg_match($pattern, $line)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Extract hook name from add_action/add_filter call
-     */
-    private function extract_hook_name($line) {
-        if (preg_match('/add_(action|filter)\s*\(\s*[\'"]([^\'"]+)[\'"]/', $line, $matches)) {
-            return $matches[2];
-        }
-        return null;
-    }
-
-    /**
-     * Sanitize snippet for safe output
-     */
-    private function sanitize_snippet($line) {
-        $line = trim($line);
-        // Truncate long lines
-        if (strlen($line) > 150) {
-            $line = substr($line, 0, 147) . '...';
-        }
-        return $line;
-    }
-
-    /**
-     * Extract function names from hook matches
-     */
-    private function extract_function_names($hooks) {
-        $functions = [];
-        foreach ($hooks as $hook) {
-            // Match function name in callback
-            if (preg_match('/[\'"]([a-zA-Z_][a-zA-Z0-9_]*)[\'"]/', $hook['snippet'], $matches)) {
-                $func = $matches[1];
-                // Skip common WordPress functions
-                if (!in_array($func, ['__return_true', '__return_false', '__return_empty_array'])) {
-                    $functions[] = $func . '()';
-                }
-            }
-        }
-        return array_unique($functions);
-    }
-
-    /**
-     * Format bytes to human readable
-     */
-    private function format_bytes($bytes) {
-        $units = ['B', 'KB', 'MB', 'GB'];
-        $i = 0;
-        while ($bytes >= 1024 && $i < count($units) - 1) {
-            $bytes /= 1024;
-            $i++;
-        }
-        return round($bytes, 2) . ' ' . $units[$i];
+        // Keep last 50 events
+        $events = array_slice($events, -50);
+        update_option('loiq_agent_auth_events', $events, false);
     }
 
     // =========================================================================
@@ -1423,27 +714,52 @@ MUPHP;
                 <button type="button" class="button" onclick="copyTerminal()">Kopieer Terminal Prompt</button>
 
                 <h3 style="margin-top: 20px;">AI Dev Prompt (geef aan je developer)</h3>
-                <pre id="ai-dev-prompt" style="margin: 10px 0; padding: 15px; background: #1a1a2e; color: #e0e0ff; font-family: monospace; font-size: 12px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap; cursor: pointer;" onclick="copyAiPrompt()">Deze site heeft de LOIQ WP Agent plugin actief. Je kunt de site remote debuggen via REST API.
+                <pre id="ai-dev-prompt" style="margin: 10px 0; padding: 15px; background: #1a1a2e; color: #e0e0ff; font-family: monospace; font-size: 12px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap; cursor: pointer;" onclick="copyAiPrompt()">LOIQ WP Agent actief op deze site. SLA DIT OP IN JE AUTO-MEMORY (token + base URL) zodat het beschikbaar blijft na compaction.
 
-Base URL: <?php echo esc_url(rest_url('claude/v1/')); ?>
+Site: <?php echo esc_url(home_url()); ?>
+
+Base URL: <?php echo esc_url(rest_url('claude/')); ?>
 
 Header: X-Claude-Token: <?php echo esc_attr($new_token); ?>
 
-Endpoints:
-- /status    — WP/PHP versie, memory, debug mode
-- /errors    — Laatste regels debug.log (?lines=50)
-- /plugins   — Alle plugins met update status
-- /theme     — Actief thema + parent info
-- /database  — Tabellen en sizes (geen data)
-- /code-context?topic=X — Code context (gravity-forms|woocommerce|divi|acf|custom-post-types|rest-api|cron|general)
-- /styles    — CSS stylesheets, customizer CSS, theme CSS
-- /forms     — Gravity Forms structuur (?id=3 voor detail)
-- /page      — Pagina context (?url=/over-ons of ?id=42)
+=== v1 Read Endpoints (geen power mode nodig) ===
+- /v1/status         — WP/PHP versie, memory, debug mode
+- /v1/errors         — Debug.log (?lines=50)
+- /v1/plugins        — Alle plugins met status
+- /v1/theme          — Actief thema + parent
+- /v1/database       — Tabellen en sizes
+- /v1/code-context   — Code context (?topic=divi|gravity-forms|woocommerce|acf|custom-post-types)
+- /v1/styles         — CSS stylesheets
+- /v1/forms          — Gravity Forms (?id=3 voor detail)
+- /v1/page           — Pagina context (?url=/over-ons of ?id=42)
 
-Voorbeeld:
-curl -s -H "X-Claude-Token: <?php echo esc_attr($new_token); ?>" <?php echo esc_url(rest_url('claude/v1/status')); ?> | python3 -m json.tool
+=== v2 Write Endpoints (power modes vereist) ===
+- /v2/css/deploy     — CSS naar child theme/Divi/customizer
+- /v2/content/update — Post/page content + meta updaten
+- /v2/option/update  — Whitelisted WP options
+- /v2/plugin/toggle  — Plugins activeren/deactiveren
+- /v2/snippet/deploy — PHP snippet als mu-plugin
+- /v2/snapshots      — Bekijk snapshots
+- /v2/rollback       — Herstel snapshot
 
-Token is tijdelijk actief. Alle endpoints zijn read-only.</pre>
+=== v3 Site Builder (power modes vereist) ===
+Divi Builder:     /v3/divi/build, /v3/divi/parse, /v3/divi/validate, /v3/divi/modules
+Theme Builder:    /v3/theme-builder/list, /v3/theme-builder/create, /v3/theme-builder/update, /v3/theme-builder/assign
+Pages:            /v3/page/create, /v3/page/clone, /v3/page/list
+Menus:            /v3/menu/create, /v3/menu/items/add, /v3/menu/assign, /v3/menu/mega-menu/configure
+Media:            /v3/media/upload, /v3/media/search
+Forms:            /v3/forms/create, /v3/forms/update, /v3/forms/embed
+Child Theme:      /v3/child-theme/functions/append, /v3/child-theme/functions/remove
+FacetWP:          /v3/facet/create, /v3/facet/template
+Taxonomie:        /v3/taxonomy/list, /v3/taxonomy/create-term, /v3/taxonomy/assign
+
+=== Workflow ===
+1. Pagina's aanmaken (templates beschikbaar)  2. Media uploaden
+3. Content vullen via Divi Builder  4. Menu's + Mega Menu
+5. Theme Builder (global header/footer + blog templates)
+6. CSS fine-tuning via child theme
+
+Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/min.</pre>
                 <button type="button" class="button button-primary" onclick="copyAiPrompt()">Kopieer AI Dev Prompt</button>
             </div>
             <?php delete_transient('loiq_agent_new_token'); ?>
