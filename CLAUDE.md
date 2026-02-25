@@ -569,3 +569,16 @@ Typische flow voor het bouwen van een complete site:
 ### v1.0.0
 - Single-file architectuur simpeler voor dit use case
 - `password_hash()` beter dan plain CONSTANT in wp-config
+
+---
+
+## Training Documentatie
+
+Uitgebreide training docs voor autonoom site bouwen:
+
+| Document | Inhoud |
+|----------|--------|
+| `training/SITE-BUILD-PLAYBOOK.md` | End-to-end workflow: 9 fasen van pagina tot oplevering |
+| `training/DIVI-THEME-BUILDER.md` | Theme Builder architectuur, blog templates, header/footer |
+| `training/MAX-MEGA-MENU.md` | Mega menu configuratie via API |
+| `training/DIVI-PATTERNS.md` | 9 design patterns als JSON (hero, grid, FAQ, CTA, etc.) |
