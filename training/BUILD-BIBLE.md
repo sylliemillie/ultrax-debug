@@ -531,56 +531,328 @@ Gebruik de JSON templates (`templates/homepage.json`, etc.) als startpunt. Templ
 
 ---
 
-## DEEL 5: ACADEMISCHE BRONNEN
+## DEEL 5: CSS ARCHITECTUUR — ONE SOURCE OF TRUTH
 
-### Design System Theory
-- **Atomic Design** (Brad Frost, 2016): Atoms → Molecules → Organisms → Templates → Pages. Divi's Section/Row/Column/Module hierarchie volgt dit patroon
-- **Design Tokens** (Salesforce Lightning, 2019): Global Colors en Fonts in Divi zijn design tokens — abstracte waarden die door het hele systeem hergebruikt worden
+> Principe: elke CSS regel heeft precies 1 juiste plek. Nooit hetzelfde tweemaal schrijven.
 
-### WordPress Development Standards
-- **WordPress Coding Standards** (WordPress.org): Escaping, sanitization, nonces, capabilities
-- **Theme Review Handbook** (WordPress.org): Child theme best practices, template hierarchy
-- **WordPress REST API Handbook**: Authentication, schema, error handling
+### 5.1 CSS Cascade — Waar Wat Hoort
 
-### Divi-Specifiek
-- **Divi Theme Builder** (Elegant Themes docs): Template assignments, conditions, global vs custom
-- **Divi Global Presets** (ET blog, 2022): Preset system als CSS class equivalent
-- **Divi Role Editor** (ET docs): Client handoff user restrictions
-- **Divi 5 Design Variables** (2025): Volgende generatie design tokens
+```
+LAAG 1: CHILD THEME functions.php (enqueueing)
+├── FontAwesome Pro laden via wp_enqueue_style()
+├── Google Fonts / Variable Fonts laden
+├── GSAP laden (als nodig)
+└── Custom scripts/styles registreren
 
-### Security
-- **OWASP WordPress Security** (2024): Top 10 WordPress security risks
-- **Content Security Policy** (MDN): XSS prevention in themes
-- **NIST SP 800-207** (Zero Trust Architecture): Applicable to WP Agent power modes
+LAAG 2: CHILD THEME style.css (sitewide CSS)
+├── CSS Custom Properties (:root design tokens)
+├── Fluid typography scale (clamp)
+├── Fluid spacing scale (clamp)
+├── OKLCH kleurpaletten
+├── Global component styles (buttons, cards, forms)
+├── Glassmorphism utility classes
+├── Bento grid utility classes
+├── Animation keyframes
+├── prefers-reduced-motion overrides
+├── Dark mode overrides (@media prefers-color-scheme)
+└── Responsive overrides die sitewide gelden
+
+LAAG 3: DIVI GLOBAL PRESETS (design system in Divi)
+├── Button presets (primary, secondary, outline, ghost)
+├── Heading presets (H1, H2, H3 met fluid sizes)
+├── Text presets (body, lead, small, caption)
+├── Image presets (rounded, shadow, hover-zoom)
+├── Blurb presets (icon-top, icon-left, card-style)
+└── Section presets (light, dark, accent, glass)
+
+LAAG 4: DIVI MODULE SETTINGS (per module instance)
+├── Spacing (padding, margin)
+├── Colors (background, text — via Global Colors)
+├── Typography (via preset of per-module)
+└── Transform, hover, scroll effects
+
+LAAG 5: DIVI CUSTOM CSS PER MODULE (Module → Advanced → Custom CSS)
+├── Specifieke overrides voor dit ene module instance
+└── Pseudo-elements (::before, ::after) op module level
+
+LAAG 6: DIVI PAGE-LEVEL CUSTOM CSS (Page Settings → Custom CSS)
+├── CSS die ALLEEN voor deze specifieke pagina geldt
+├── Layout tweaks specifiek voor deze pagina
+└── Pagina-specifieke animaties of overrides
+
+LAAG 7: THEME BUILDER TEMPLATE CSS (via child theme of Global Presets)
+├── Blog post template styling (alle blog posts globaal)
+├── Archive template styling
+├── Header/footer specifieke styles
+└── 404/search template styles
+```
+
+### 5.2 One Source of Truth Regels
+
+| Wat | Waar | NOOIT hier |
+|-----|------|-----------|
+| **Kleurpaletten** | `:root` CSS vars in child theme | Hardcoded hex in modules |
+| **Font sizes** | `clamp()` scale in child theme | Vaste px in Divi module settings |
+| **Spacing scale** | `clamp()` vars in child theme | Willekeurige padding per module |
+| **Button styles** | Divi Global Preset "Primary Button" | Per-button handmatig stylen |
+| **FA Pro icons** | `wp_enqueue_style` in functions.php | `<link>` tag in Code Module |
+| **Blog styling** | Theme Builder template + child theme CSS | Per-post handmatig |
+| **Sitewide overrides** | Child theme style.css | Divi Theme Options Custom CSS |
+| **Pagina-specifiek** | Divi Page Custom CSS | Child theme met page-ID selectors |
+
+### 5.3 FontAwesome Pro Setup (Child Theme)
+
+```php
+// functions.php — FA Pro enqueue
+function ultrax_enqueue_fontawesome_pro() {
+    wp_enqueue_style(
+        'font-awesome-pro',
+        'https://kit.fontawesome.com/JOUW-KIT-ID.js', // of lokaal
+        array(),
+        '6.5.0'
+    );
+}
+add_action('wp_enqueue_scripts', 'ultrax_enqueue_fontawesome_pro');
+```
+
+Gebruik in Divi: module_class `fa-solid fa-icon-name` of in Code Module HTML.
+Divi Blurb Module: icon picker ondersteunt FA icons native als FA Pro geladen is.
+
+### 5.4 Snel Werken met CSS Tokens
+
+```css
+/* child theme style.css — Design Tokens (ONE source) */
+:root {
+    /* Kleuren — wijzig hier, hele site updatet */
+    --brand-primary: oklch(0.55 0.20 250);
+    --brand-accent: oklch(0.65 0.25 25);
+    --brand-dark: oklch(0.15 0.02 260);
+    --brand-light: oklch(0.97 0.005 260);
+    --brand-gray: oklch(0.55 0.01 260);
+
+    /* Typography — fluid scale */
+    --fs-display: clamp(3rem, 2rem + 4vw, 8rem);
+    --fs-h1: clamp(2.5rem, 1.8rem + 2.5vw, 5rem);
+    --fs-h2: clamp(1.75rem, 1.3rem + 1.5vw, 3rem);
+    --fs-h3: clamp(1.25rem, 1rem + 0.8vw, 2rem);
+    --fs-body: clamp(1rem, 0.95rem + 0.2vw, 1.125rem);
+
+    /* Spacing — fluid scale */
+    --space-xs: clamp(0.75rem, 0.6rem + 0.5vw, 1rem);
+    --space-s: clamp(1rem, 0.8rem + 0.65vw, 1.5rem);
+    --space-m: clamp(1.5rem, 1.2rem + 1vw, 2.25rem);
+    --space-l: clamp(2rem, 1.5rem + 1.6vw, 3rem);
+    --space-xl: clamp(3rem, 2rem + 3vw, 5rem);
+    --space-2xl: clamp(4rem, 2.5rem + 5vw, 8rem);
+
+    /* Radius */
+    --radius-sm: clamp(8px, 1vw, 12px);
+    --radius-md: clamp(12px, 1.5vw, 24px);
+    --radius-lg: clamp(16px, 2vw, 32px);
+
+    /* Transitions */
+    --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-enter: cubic-bezier(0, 0, 0.2, 1);
+    --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+    --duration-fast: 200ms;
+    --duration-normal: 300ms;
+    --duration-slow: 500ms;
+}
+```
+
+**Voordeel:** Wijzig 1 variabele → hele site updatet. Klant wisselt van blauw naar groen? Verander `--brand-primary`, klaar. Jij werkt snel, klant is flexibel.
 
 ---
 
-## SAMENVATTING: 21 GOUDEN REGELS
+## DEEL 6: 2030-READY DESIGN STANDAARD
 
+> Elke site die we bouwen moet eruit zien alsof hij in 2030 is ontworpen.
+> ALTIJD research doen naar de nieuwste design trends VOOR je begint te bouwen.
+> Eerste output = finale output. Research eerst, dan pas pixels.
+
+### 6.1 Research-First Protocol (NIET ONDERHANDELBAAR)
+
+Bij ELKE nieuwe site build:
+1. **Branche-research:** WebSearch naar "beste [branche] websites 2025 2026" + Awwwards/CSDA winnaars in die niche
+2. **Design trend check:** Wat zijn de cutting-edge patterns voor dit type site?
+3. **Concurrentie-analyse:** Hoe zien de top 3 concurrenten eruit? Wat kunnen we beter?
+4. **Klant design system:** Welke kleuren, fonts, tone past bij dit merk?
+5. **Dan pas bouwen** — met al die kennis in je hoofd
+
+### 6.2 Wat "2030 Styling" Concreet Betekent
+
+| 2020 (VERMIJD) | 2030-Ready (DIT BOUWEN WE) |
+|-----------------|--------------------------|
+| Statische hero met centered text op stockfoto | Typography-as-hero: oversized kinetic type, geen image nodig |
+| Symmetrische 12-column Bootstrap grid | Asymmetrische bento grids met organische whitespace |
+| Hover = kleur verandering | Micro-interacties: translateY, shadow-shift, scale, 300ms smooth easing |
+| Fade-in als enige animatie | Scroll-driven narrative: content onthult met scroll progress |
+| RGB/hex kleuren | OKLCH kleurensysteem met wide-gamut P3 |
+| Vaste font sizes (px) | Fluid clamp() typography: hero 80-200px desktop, 48px mobile |
+| Vaste breakpoints | Fluid alles: clamp() voor type + spacing, container queries voor componenten |
+| Lichte achtergrond, donker = afterthought | Dark mode als first-class citizen (of dark-first design) |
+| Platte kaartjes | Glassmorphic depth layers met frosted panels |
+| Template-look | Menselijke imperfectie: organische vormen, bewuste asymmetrie |
+
+### 6.3 De 10 Geboden van 2030-Ready Design
+
+1. **Typography is de hero.** Oversized, fluid (clamp()), variable fonts. Het lettertype DRAAGT het merk.
+2. **Motion is meaning.** Elke animatie heeft een doel. 300-400ms, smooth easing, prefers-reduced-motion gerespecteerd.
+3. **Bento grids, niet Bootstrap grids.** Asymmetrisch, organisch, rounded corners (12-24px), micro-interacties per cel.
+4. **OKLCH boven hex.** Perceptueel uniform, wide-gamut, palette-generatie-friendly.
+5. **Scroll vertelt een verhaal.** Content onthult met scroll progress. Scroll-driven CSS op compositor thread.
+6. **Dark mode is niet optioneel.** prefers-color-scheme, proper token system, getest contrast in beide themes.
+7. **Performance is design.** LCP <2.5s, INP <200ms, CLS <0.1. Geen uitzonderingen.
+8. **Accessibility is architectuur.** WCAG 2.2 AA vanaf wireframe. Focus indicators, target sizes, semantic HTML, reduced motion.
+9. **Fluid alles.** clamp() voor type, clamp() voor spacing, container queries voor componenten.
+10. **Menselijke imperfectie verslaat AI-steriliteit.** Organische vormen, bewuste asymmetrie, editorial karakter.
+
+### 6.4 Divi Implementatie Matrix
+
+| Feature | Divi Native | Custom CSS Nodig | Custom JS Nodig |
+|---------|-------------|-----------------|-----------------|
+| Scroll effects (fade, scale, motion) | Ja | - | - |
+| Sticky header met style transitions | Ja | - | - |
+| Hover states op cards/buttons | Ja | - | - |
+| Parallax backgrounds | Ja | - | - |
+| Transform + hover states | Ja | - | - |
+| Glassmorphism (backdrop-filter) | - | Ja | - |
+| Bento grids (CSS Grid override) | - | Ja | - |
+| Fluid typography (clamp) | - | Ja | - |
+| OKLCH kleuren | - | Ja | - |
+| Variable font transitions | - | Ja | - |
+| Dark mode toggle | - | Ja | - |
+| Aurora/mesh gradient backgrounds | - | Ja | - |
+| Asymmetric broken grids | - | Ja | - |
+| GSAP kinetic typography | - | - | Ja |
+| Horizontal scroll sections | - | - | Ja |
+| Number counter animaties | - | - | Ja |
+| Scroll-linked video playback | - | - | Ja |
+
+### 6.5 Micro-Interactie Specificaties
+
+| Element | Hover State | Active State | Duur |
+|---------|-------------|--------------|------|
+| Button | translateY(-2px), shadow increase | scale(0.98) | 300ms |
+| Card | translateY(-4px), shadow deepen | scale(0.99) | 350ms |
+| Link | underline draw-in van links | - | 250ms |
+| Image | scale(1.03) met overflow:hidden container | - | 400ms |
+| Nav item | weight shift of underline slide | - | 250ms |
+| Input | border-color transition, label float | - | 200ms |
+
+**Easing:** NOOIT `linear`. Altijd `cubic-bezier(0.4, 0, 0.2, 1)` of soortgelijk.
+
+### 6.6 Accessibility & Compliance (Wettelijk Verplicht)
+
+**European Accessibility Act (EAA)** — van kracht sinds 28 juni 2025:
+- Alle EU e-commerce sites met 10+ medewerkers of €2M+ omzet MOETEN WCAG 2.1 AA compliant zijn
+- Deadline bestaande content: 28 juni 2030
+
+**WCAG 2.2 checklist (minimum bij elke build):**
+- Kleurcontrast: 4.5:1 body text, 3:1 large text, 3:1 UI componenten
+- Focus indicators: zichtbaar, 2px+ dik, 3:1 contrast
+- Touch targets: minimaal 44x44px (aanbevolen)
+- Keyboard navigatie: volledige site bruikbaar via toetsenbord
+- Skip links: "Skip to main content" als eerste focusbaar element
+- Heading hierarchie: 1 h1 per pagina, sequentieel (geen h2 → h4 skip)
+- Alt tekst: beschrijvend voor informatieve images, alt="" voor decoratief
+- Reduced motion: `@media (prefers-reduced-motion: reduce)` schakelt animaties uit
+- Lang attribute: `<html lang="nl">` (of passende taal)
+
+### 6.7 Core Web Vitals Targets
+
+| Metric | Target | Wat Het Betekent |
+|--------|--------|-----------------|
+| **LCP** | <2.5s | Grootste element op pagina laadt snel |
+| **INP** | <200ms | Interacties reageren direct |
+| **CLS** | <0.1 | Pagina springt niet rond tijdens laden |
+
+**Divi-specifieke tips:** Dynamic CSS + Critical CSS AAN, lazy loading op images, preload display font, geen backdrop-filter op full-width sections.
+
+---
+
+## DEEL 7: ACADEMISCHE BRONNEN
+
+### Design System Theory
+- **Atomic Design** (Brad Frost, 2016): Atoms → Molecules → Organisms → Templates → Pages
+- **Design Tokens** (Salesforce Lightning, 2019): Global Colors/Fonts als abstracte waarden
+
+### 2030-Ready Design Research
+- [Figma: Top Web Design Trends for 2026](https://www.figma.com/resource-library/web-design-trends/)
+- [Digital Silk: Future of Web Design — Predictions Till 2030](https://www.digitalsilk.com/digital-trends/future-of-web-design/)
+- [Evil Martians: OKLCH in CSS](https://evilmartians.com/chronicles/oklch-in-css-why-quit-rgb-hsl)
+- [Smashing Magazine: Modern Fluid Typography](https://www.smashingmagazine.com/2022/01/modern-fluid-typography-css-clamp/)
+- [MDN: Scroll-Driven Animations](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Scroll-driven_animations)
+- [Design Monks: Typography Trends 2026](https://www.designmonks.co/blog/typography-trends-2026)
+- [Fontfabric: Top 10 Typography Trends 2026](https://www.fontfabric.com/blog/10-design-trends-shaping-the-visual-typographic-landscape-in-2026/)
+- [Creative Bloq: Top Typography Trends 2026](https://www.creativebloq.com/design/fonts-typography/breaking-rules-and-bringing-joy-top-typography-trends-for-2026)
+
+### Accessibility & Compliance
+- [W3C: What's New in WCAG 2.2](https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/)
+- [AccessibleEU: EAA June 2025](https://accessible-eu-centre.ec.europa.eu/content-corner/news/eaa-comes-effect-june-2025-are-you-ready-2025-01-31_en)
+- [Level Access: WCAG 2.2 Checklist](https://www.levelaccess.com/blog/wcag-2-2-aa-summary-and-checklist-for-website-owners/)
+
+### Performance
+- [web.dev: Core Web Vitals Thresholds](https://web.dev/articles/defining-core-web-vitals-thresholds)
+- [NitroPack: Core Web Vitals 2026](https://nitropack.io/blog/most-important-core-web-vitals-metrics/)
+
+### WordPress & Divi
+- **WordPress Coding Standards** (WordPress.org)
+- **Theme Review Handbook** (WordPress.org)
+- **Divi Theme Builder** (Elegant Themes docs)
+- **Divi Global Presets** (ET blog, 2022)
+- **Divi 5 Interactions** (ET, 2025)
+- **OWASP WordPress Security** (2024)
+- **NIST SP 800-207** (Zero Trust Architecture)
+
+---
+
+## SAMENVATTING: 30 GOUDEN REGELS
+
+### Mindset (1-3)
 1. **Denk als €100K+ agency** — elk detail telt, geen shortcuts
-2. **Global Colors + Fonts eerst** — alles daarna erft automatisch
-3. **Menu + pagina's voor Theme Builder** — header heeft menu nodig
-4. **Theme Builder voor content** — bouw niet blind zonder header/footer
-5. **Logo via Media Library** — nooit hardcoded
-6. **Contact info centraal** — shortcodes of 1 plek, nooit verspreid
-7. **Social icons via Divi module** — niet via Font Awesome/CSS
-8. **Icons via FA Pro of SVG** — hoogste kwaliteit, consistent style
-9. **Gravity Forms via shortcode in Code Module** — ajax=true, title=false
-10. **Alt tekst op elke afbeelding** — geen uitzonderingen
-11. **CSS via Divi settings > Presets > Module CSS > child theme** — in die volgorde
-12. **Presets voor alles** — buttons, headings, text, images
-13. **Admin labels op sections** — navigatie in builder
-14. **Responsive check: desktop → tablet → mobile** — in die volgorde
-15. **Client = Editor role** — nooit Administrator
-16. **Divi Role Editor** — beperk wat client kan breken
-17. **Performance opties aan** — Dynamic CSS, Critical CSS, Defer
-18. **Child theme voor CSS** — niet Custom CSS box of Code Modules
-19. **Dry-run eerst** — preview voor uitvoering
-20. **Session tracking** — rollback per sessie
-21. **SEO laatst** — content moet er zijn voor meta
+2. **2030 styling of niets** — research trends VOOR je bouwt, loop altijd vooruit
+3. **Research first, pixels last** — WebSearch branche + trends + concurrentie, dan pas bouwen
+
+### Build Volgorde (4-8)
+4. **Global Colors + Fonts eerst** — alles daarna erft automatisch
+5. **Menu + pagina's voor Theme Builder** — header heeft menu nodig
+6. **Theme Builder voor content** — bouw niet blind zonder header/footer
+7. **SEO laatst** — content moet er zijn voor meta
+8. **Dry-run eerst** — preview voor uitvoering
+
+### Content & Componenten (9-16)
+9. **Logo via Media Library** — nooit hardcoded
+10. **Contact info centraal** — shortcodes of 1 plek, nooit verspreid
+11. **Social icons via Divi module** — niet via Font Awesome/CSS
+12. **Icons via FA Pro of SVG** — hoogste kwaliteit, consistent style
+13. **Gravity Forms via shortcode in Code Module** — ajax=true, title=false
+14. **Alt tekst op elke afbeelding** — geen uitzonderingen
+15. **Admin labels op sections** — navigatie in builder
+16. **Responsive check: desktop → tablet → mobile** — in die volgorde
+
+### CSS Architectuur (17-22)
+17. **One source of truth** — elke CSS regel heeft precies 1 juiste plek
+18. **CSS tokens in :root** — kleuren, fonts, spacing, radius, easing
+19. **Sitewide CSS in child theme** — niet Divi Custom CSS box of Code Modules
+20. **Page-specifiek in Divi Page CSS** — niet child theme met page-ID selectors
+21. **Blog/archive styling via Theme Builder** — globaal voor alle posts
+22. **Presets voor alles** — buttons, headings, text, images
+
+### Design & Performance (23-27)
+23. **Typography is de hero** — oversized, fluid, variable fonts
+24. **Micro-interacties op elk interactief element** — 300ms, smooth easing
+25. **Performance = design** — LCP <2.5s, INP <200ms, CLS <0.1
+26. **Accessibility = architectuur** — WCAG 2.2 AA, EAA compliant
+27. **prefers-reduced-motion respecteren** — animaties uit voor wie dat wil
+
+### Operations (28-30)
+28. **Client = Editor role** — Divi Role Editor configureren
+29. **Performance opties aan** — Dynamic CSS, Critical CSS, Defer
+30. **Session tracking** — rollback per sessie
 
 ---
 
 *Dit document is het trainingsmateriaal voor de LOIQ WP Agent.*
 *Elke regel is gebaseerd op productie-ervaring, academisch onderzoek, en community best practices.*
-*Versie 1.0 — 2026-02-25*
+*Versie 2.0 — 2026-02-25*
