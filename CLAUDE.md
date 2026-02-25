@@ -578,7 +578,10 @@ Uitgebreide training docs voor autonoom site bouwen:
 
 | Document | Inhoud |
 |----------|--------|
-| `training/SITE-BUILD-PLAYBOOK.md` | End-to-end workflow: 9 fasen van pagina tot oplevering |
+| `training/BUILD-BIBLE.md` | **CANONICAL** — 21 gouden regels, €100K+ agency standaard, build flow, "zo hoort het" patronen |
+| `training/SITE-BUILD-PLAYBOOK.md` | API workflow: 9 fasen met exacte endpoint calls |
 | `training/DIVI-THEME-BUILDER.md` | Theme Builder architectuur, blog templates, header/footer |
 | `training/MAX-MEGA-MENU.md` | Mega menu configuratie via API |
 | `training/DIVI-PATTERNS.md` | 9 design patterns als JSON (hero, grid, FAQ, CTA, etc.) |
+
+**BUILD-BIBLE.md is de wet.** Lees deze EERST bij elke site build. De andere docs zijn API reference.
