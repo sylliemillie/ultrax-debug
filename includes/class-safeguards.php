@@ -28,8 +28,8 @@ class LOIQ_Agent_Safeguards {
     ];
 
     /** Write rate limits */
-    const WRITE_RATE_LIMIT_MINUTE = 30;
-    const WRITE_RATE_LIMIT_HOUR   = 500;
+    const WRITE_RATE_LIMIT_MINUTE = 60;
+    const WRITE_RATE_LIMIT_HOUR   = 1000;
 
     /** Snippet constraints */
     const SNIPPET_MAX_LINES   = 500;
@@ -870,6 +870,54 @@ class LOIQ_Agent_Safeguards {
         }
 
         return true;
+    }
+
+    // =========================================================================
+    // SNAPSHOT RETENTION
+    // =========================================================================
+
+    /**
+     * Prune snapshots older than $days. Called daily via WP cron.
+     *
+     * @param int $days  Days to retain (default 30)
+     * @return int       Number of rows deleted
+     * @since 3.1.0
+     */
+    public static function prune_snapshots($days = 30) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'loiq_agent_snapshots';
+        $days = max(1, (int) $days);
+
+        $deleted = $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$table} WHERE created_at < DATE_SUB(NOW(), INTERVAL %d DAY)",
+            $days
+        ));
+
+        return (int) $deleted;
+    }
+
+    /**
+     * Get snapshot table stats (for admin UI / auditing).
+     *
+     * @return array{total: int, oldest: string|null, size_bytes: int}
+     * @since 3.1.0
+     */
+    public static function get_snapshot_stats() {
+        global $wpdb;
+        $table = $wpdb->prefix . 'loiq_agent_snapshots';
+
+        $total = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$table}");
+        $oldest = $wpdb->get_var("SELECT MIN(created_at) FROM {$table}");
+        $size = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT DATA_LENGTH + INDEX_LENGTH FROM information_schema.TABLES WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s",
+            DB_NAME, $table
+        ));
+
+        return [
+            'total'      => $total,
+            'oldest'     => $oldest,
+            'size_bytes' => $size,
+        ];
     }
 
     // =========================================================================
