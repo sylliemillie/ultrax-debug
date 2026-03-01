@@ -3,7 +3,7 @@
  * Plugin Name: LOIQ WordPress Agent
  * Plugin URI:  https://loiq.nl/wp-agent
  * Description: Beveiligde REST API endpoints voor Claude CLI site debugging + write capabilities met safeguards.
- * Version: 3.1.3
+ * Version: 3.1.4
  * Update URI: https://github.com/LOIQ-ai/loiq-wp-assistent
  * Author: LOIQ
  * Author URI: https://loiq.nl
@@ -14,7 +14,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('LOIQ_AGENT_VERSION', '3.1.3');
+define('LOIQ_AGENT_VERSION', '3.1.4');
 define('LOIQ_AGENT_DB_VERSION', '2.0.0');
 define('LOIQ_AGENT_GITHUB_REPO', 'LOIQ-ai/loiq-wp-assistent');
 define('LOIQ_AGENT_PATH', plugin_dir_path(__FILE__));
@@ -55,7 +55,7 @@ class LOIQ_WP_Agent {
     // mu-plugin filename
     const MU_PLUGIN_FILE = 'loiq-agent-logging.php';
 
-    public static function get_instance() {
+    public static function get_instance(): self {
         if (self::$instance === null) {
             self::$instance = new self();
         }
@@ -65,7 +65,7 @@ class LOIQ_WP_Agent {
     /**
      * Plugin activation - generate token and create tables
      */
-    public static function on_activation() {
+    public static function on_activation(): void {
         // Generate secure token
         $token = bin2hex(random_bytes(32));
 
@@ -91,7 +91,7 @@ class LOIQ_WP_Agent {
     /**
      * Plugin deactivation
      */
-    public static function on_deactivation() {
+    public static function on_deactivation(): void {
         // Clear transients
         delete_transient('loiq_agent_new_token');
         delete_transient('loiq_agent_activation_redirect');
@@ -114,7 +114,7 @@ class LOIQ_WP_Agent {
         // Create mu-plugins dir if needed
         if (!is_dir($mu_dir)) {
             if (!wp_mkdir_p($mu_dir)) {
-                return 'Kan mu-plugins directory niet aanmaken';
+                return __('Kan mu-plugins directory niet aanmaken', 'loiq-wp-agent');
             }
         }
 
@@ -165,7 +165,7 @@ MUPHP;
 
         // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- activation context, WP_Filesystem may not be available
         if (file_put_contents($mu_file, $content) === false) {
-            return 'Kan mu-plugin niet schrijven naar ' . $mu_file;
+            return sprintf(__('Kan mu-plugin niet schrijven naar %s', 'loiq-wp-agent'), $mu_file);
         }
 
         return true;
@@ -174,7 +174,7 @@ MUPHP;
     /**
      * Remove the mu-plugin file.
      */
-    public static function remove_mu_plugin() {
+    public static function remove_mu_plugin(): void {
         $mu_file = ABSPATH . 'wp-content/mu-plugins/' . self::MU_PLUGIN_FILE;
         if (file_exists($mu_file)) {
             @unlink($mu_file);
@@ -185,7 +185,7 @@ MUPHP;
      * Install or update mu-plugin if missing or outdated.
      * Runs on every load so updates via WP auto-updater are picked up.
      */
-    private function maybe_update_mu_plugin() {
+    private function maybe_update_mu_plugin(): void {
         $mu_file = ABSPATH . 'wp-content/mu-plugins/' . self::MU_PLUGIN_FILE;
 
         // Check if mu-plugin exists and contains current version
@@ -203,7 +203,7 @@ MUPHP;
     /**
      * Create database tables
      */
-    private static function create_tables() {
+    private static function create_tables(): void {
         global $wpdb;
         $charset = $wpdb->get_charset_collate();
 
@@ -292,14 +292,14 @@ MUPHP;
      * WP Cron callback: prune old snapshots.
      * @since 3.1.0
      */
-    public static function cron_prune_snapshots() {
+    public static function cron_prune_snapshots(): void {
         LOIQ_Agent_Safeguards::prune_snapshots(30);
     }
 
     /**
      * Upgrade DB tables if version mismatch
      */
-    private function maybe_upgrade_db() {
+    private function maybe_upgrade_db(): void {
         $installed = get_option('loiq_agent_db_version', '0');
         if (version_compare($installed, LOIQ_AGENT_DB_VERSION, '<')) {
             self::create_tables();
@@ -309,7 +309,7 @@ MUPHP;
     /**
      * Redirect to settings after activation
      */
-    public function activation_redirect() {
+    public function activation_redirect(): void {
         if (get_transient('loiq_agent_activation_redirect') && self::is_allowed_admin_user()) {
             delete_transient('loiq_agent_activation_redirect');
             wp_redirect(admin_url('tools.php?page=loiq-wp-agent'));
@@ -320,7 +320,7 @@ MUPHP;
     /**
      * Register REST API routes
      */
-    public function register_routes() {
+    public function register_routes(): void {
         // Register v1 read endpoints
         LOIQ_Agent_Read_Endpoints::register_routes($this);
 
@@ -352,7 +352,7 @@ MUPHP;
         $category = $this->get_write_category($request);
         if ($category && !LOIQ_Agent_Safeguards::is_enabled($category)) {
             return new WP_Error('power_mode_off',
-                "Power mode voor '{$category}' is uitgeschakeld. Enable via wp-admin.",
+                sprintf(__('Power mode voor \'%s\' is uitgeschakeld. Enable via wp-admin.', 'loiq-wp-agent'), $category),
                 ['status' => 403]
             );
         }
@@ -371,7 +371,7 @@ MUPHP;
      * @param WP_REST_Request $request
      * @return string|null
      */
-    private function get_write_category(WP_REST_Request $request) {
+    private function get_write_category(WP_REST_Request $request): ?string {
         $route = $request->get_route();
 
         // v2 routes
@@ -409,14 +409,14 @@ MUPHP;
         $is_localhost = in_array(sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? '')), ['127.0.0.1', '::1']);
         if (!is_ssl() && !$is_localhost) {
             $this->log_request($request->get_route(), 403, 'https_required');
-            return new WP_Error('https_required', 'HTTPS is verplicht', ['status' => 403]);
+            return new WP_Error('https_required', __('HTTPS is verplicht', 'loiq-wp-agent'), ['status' => 403]);
         }
 
         // 2. Auto-disable check
         $enabled_until = (int) get_option('loiq_agent_enabled_until', 0);
         if ($enabled_until > 0 && time() > $enabled_until) {
             $this->log_request($request->get_route(), 503, 'timer_expired');
-            return new WP_Error('disabled', 'Debug endpoint is uitgeschakeld (timer verlopen)', ['status' => 503]);
+            return new WP_Error('disabled', __('Debug endpoint is uitgeschakeld (timer verlopen)', 'loiq-wp-agent'), ['status' => 503]);
         }
 
         // 3. Auth lockout check — block IP after 5 failed attempts (15 min cooldown)
@@ -425,7 +425,7 @@ MUPHP;
         $failed_attempts = (int) get_transient($lockout_key);
         if ($failed_attempts >= 5) {
             $this->log_request($request->get_route(), 403, 'auth_lockout:' . $failed_attempts);
-            return new WP_Error('auth_lockout', 'Te veel mislukte pogingen. Probeer over 15 minuten opnieuw.', ['status' => 403]);
+            return new WP_Error('auth_lockout', __('Te veel mislukte pogingen. Probeer over 15 minuten opnieuw.', 'loiq-wp-agent'), ['status' => 403]);
         }
 
         // 4. Token verification (primary) OR WP Application Password (fallback)
@@ -438,7 +438,7 @@ MUPHP;
             if (empty($hash) || !password_verify($token, $hash)) {
                 set_transient($lockout_key, $failed_attempts + 1, 900);
                 $this->log_request($request->get_route(), 401, 'invalid_token');
-                return new WP_Error('invalid_token', 'Ongeldig token', ['status' => 401]);
+                return new WP_Error('invalid_token', __('Ongeldig token', 'loiq-wp-agent'), ['status' => 401]);
             }
             $authenticated = true;
         } else {
@@ -452,7 +452,7 @@ MUPHP;
         if (!$authenticated) {
             set_transient($lockout_key, $failed_attempts + 1, 900);
             $this->log_request($request->get_route(), 401, 'missing_token');
-            return new WP_Error('missing_token', 'X-Claude-Token header of geldige WP authenticatie vereist', ['status' => 401]);
+            return new WP_Error('missing_token', __('X-Claude-Token header of geldige WP authenticatie vereist', 'loiq-wp-agent'), ['status' => 401]);
         }
 
         // Reset lockout on successful auth
@@ -465,7 +465,7 @@ MUPHP;
             $client_ip = $this->get_client_ip();
             if (!in_array($client_ip, $allowed_ips)) {
                 $this->log_request($request->get_route(), 403, 'ip_blocked');
-                return new WP_Error('ip_blocked', 'IP niet toegestaan', ['status' => 403]);
+                return new WP_Error('ip_blocked', __('IP niet toegestaan', 'loiq-wp-agent'), ['status' => 403]);
             }
         }
 
@@ -478,7 +478,7 @@ MUPHP;
         $minute_count = (int) get_transient($minute_key);
         if ($minute_count >= self::RATE_LIMIT_MINUTE) {
             $this->log_request($request->get_route(), 429, 'rate_limit_minute');
-            return new WP_Error('rate_limit', 'Te veel requests (max ' . self::RATE_LIMIT_MINUTE . '/min)', ['status' => 429]);
+            return new WP_Error('rate_limit', sprintf(__('Te veel requests (max %d/min)', 'loiq-wp-agent'), self::RATE_LIMIT_MINUTE), ['status' => 429]);
         }
 
         // Per hour
@@ -486,7 +486,7 @@ MUPHP;
         $hour_count = (int) get_transient($hour_key);
         if ($hour_count >= self::RATE_LIMIT_HOUR) {
             $this->log_request($request->get_route(), 429, 'rate_limit_hour');
-            return new WP_Error('rate_limit', 'Te veel requests (max ' . self::RATE_LIMIT_HOUR . '/uur)', ['status' => 429]);
+            return new WP_Error('rate_limit', sprintf(__('Te veel requests (max %d/uur)', 'loiq-wp-agent'), self::RATE_LIMIT_HOUR), ['status' => 429]);
         }
 
         // Increment counters
@@ -506,7 +506,7 @@ MUPHP;
      * are only used when trusted_proxy_ip is configured in admin, AND the
      * request actually comes from that proxy IP.
      */
-    private function get_client_ip() {
+    private function get_client_ip(): string {
         $ip = sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'));
 
         // Only trust proxy headers when request comes from a known proxy
@@ -535,7 +535,7 @@ MUPHP;
      * @param int    $response_code
      * @param string $reason  Optional reason for auth failures
      */
-    private function log_request($endpoint, $response_code, $reason = '') {
+    private function log_request(string $endpoint, int $response_code, string $reason = ''): void {
         global $wpdb;
         $table = $wpdb->prefix . 'loiq_agent_log';
 
@@ -562,7 +562,7 @@ MUPHP;
      *
      * @since 3.1.0
      */
-    private function log_auth_event($endpoint, $code, $ip, $reason) {
+    private function log_auth_event(string $endpoint, int $code, string $ip, string $reason): void {
         $events = get_option('loiq_agent_auth_events', []);
         if (!is_array($events)) $events = [];
 
@@ -591,7 +591,7 @@ MUPHP;
      *
      * @return bool
      */
-    public static function is_allowed_admin_user() {
+    public static function is_allowed_admin_user(): bool {
         $user = wp_get_current_user();
         if (!$user || !$user->exists()) {
             return false;
@@ -611,7 +611,7 @@ MUPHP;
      * @param array $plugins
      * @return array
      */
-    public function filter_plugin_visibility($plugins) {
+    public function filter_plugin_visibility(array $plugins): array {
         if (!self::is_allowed_admin_user()) {
             unset($plugins['loiq-wp-agent/loiq-wp-agent.php']);
         }
@@ -621,7 +621,7 @@ MUPHP;
     /**
      * Add admin menu under Tools (only for allowed email domains)
      */
-    public function add_admin_menu() {
+    public function add_admin_menu(): void {
         if (!self::is_allowed_admin_user()) {
             return;
         }
@@ -638,7 +638,7 @@ MUPHP;
     /**
      * Enqueue admin assets
      */
-    public function enqueue_admin_assets($hook) {
+    public function enqueue_admin_assets(string $hook): void {
         if ($hook !== 'tools_page_loiq-wp-agent') {
             return;
         }
@@ -650,7 +650,7 @@ MUPHP;
     /**
      * Get admin CSS
      */
-    private function get_admin_css() {
+    private function get_admin_css(): string {
         return '
             .loiq-wp-agent-wrap { max-width: 800px; }
             .loiq-wp-agent-wrap h1 { color: #1d2327; margin-bottom: 20px; }
@@ -658,7 +658,7 @@ MUPHP;
             .loiq-card h2 { margin-top: 0; padding-bottom: 10px; border-bottom: 1px solid #eee; }
             .loiq-token-display { background: #f0f0f1; padding: 15px; border-radius: 4px; font-family: monospace; font-size: 14px; word-break: break-all; margin: 15px 0; }
             .loiq-token-new { background: #d4edda; border: 1px solid #28a745; }
-            .loiq-token-new::before { content: "NIEUW - Kopieer nu! "; font-weight: bold; color: #155724; }
+            .loiq-token-new::before { content: "' . esc_attr__('NIEUW - Kopieer nu!', 'loiq-wp-agent') . ' "; font-weight: bold; color: #155724; }
             .loiq-status { display: inline-block; padding: 5px 12px; border-radius: 20px; font-weight: 500; }
             .loiq-status-active { background: #d4edda; color: #155724; }
             .loiq-status-inactive { background: #f8d7da; color: #721c24; }
@@ -686,7 +686,7 @@ MUPHP;
     /**
      * Render admin page
      */
-    public function render_admin_page() {
+    public function render_admin_page(): void {
         // Get status
         $enabled_until = (int) get_option('loiq_agent_enabled_until', 0);
         $is_active = $enabled_until > time();
@@ -707,16 +707,16 @@ MUPHP;
 
             <?php if ($new_token): ?>
             <div class="loiq-card">
-                <h2>Je Access Token</h2>
-                <p><strong>Kopieer dit token nu!</strong> Het wordt niet meer getoond na het verlaten van deze pagina.</p>
+                <h2><?php esc_html_e('Je Access Token', 'loiq-wp-agent'); ?></h2>
+                <p><strong><?php esc_html_e('Kopieer dit token nu!', 'loiq-wp-agent'); ?></strong> <?php esc_html_e('Het wordt niet meer getoond na het verlaten van deze pagina.', 'loiq-wp-agent'); ?></p>
                 <div class="loiq-token-display loiq-token-new" id="new-token"><?php echo esc_html($new_token); ?></div>
-                <button type="button" class="button button-primary" onclick="copyToken()">Kopieer Token</button>
+                <button type="button" class="button button-primary" onclick="copyToken()"><?php esc_html_e('Kopieer Token', 'loiq-wp-agent'); ?></button>
 
-                <h3 style="margin-top: 20px;">Terminal Prompt (copy-paste ready)</h3>
+                <h3 style="margin-top: 20px;"><?php esc_html_e('Terminal Prompt (copy-paste ready)', 'loiq-wp-agent'); ?></h3>
                 <pre id="terminal-prompt" style="margin: 10px 0; padding: 15px; background: #1d2327; color: #50fa7b; font-family: monospace; font-size: 13px; border-radius: 4px; overflow-x: auto; cursor: pointer;" onclick="copyTerminal()">curl -s -H "X-Claude-Token: <?php echo esc_attr($new_token); ?>" <?php echo esc_url(rest_url('claude/v1/status')); ?> | python3 -m json.tool</pre>
-                <button type="button" class="button" onclick="copyTerminal()">Kopieer Terminal Prompt</button>
+                <button type="button" class="button" onclick="copyTerminal()"><?php esc_html_e('Kopieer Terminal Prompt', 'loiq-wp-agent'); ?></button>
 
-                <h3 style="margin-top: 20px;">AI Dev Prompt (geef aan je developer)</h3>
+                <h3 style="margin-top: 20px;"><?php esc_html_e('AI Dev Prompt (geef aan je developer)', 'loiq-wp-agent'); ?></h3>
                 <pre id="ai-dev-prompt" style="margin: 10px 0; padding: 15px; background: #1a1a2e; color: #e0e0ff; font-family: monospace; font-size: 12px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap; cursor: pointer;" onclick="copyAiPrompt()">LOIQ WP Agent actief op deze site. SLA DIT OP IN JE AUTO-MEMORY (token + base URL) zodat het beschikbaar blijft na compaction.
 
 Site: <?php echo esc_url(home_url()); ?>
@@ -763,62 +763,62 @@ Taxonomie:        /v3/taxonomy/list, /v3/taxonomy/create-term, /v3/taxonomy/assi
 6. CSS fine-tuning via child theme
 
 Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/min.</pre>
-                <button type="button" class="button button-primary" onclick="copyAiPrompt()">Kopieer AI Dev Prompt</button>
+                <button type="button" class="button button-primary" onclick="copyAiPrompt()"><?php esc_html_e('Kopieer AI Dev Prompt', 'loiq-wp-agent'); ?></button>
             </div>
             <?php delete_transient('loiq_agent_new_token'); ?>
             <?php endif; ?>
 
             <div class="loiq-card">
-                <h2>Status</h2>
+                <h2><?php esc_html_e('Status', 'loiq-wp-agent'); ?></h2>
                 <p>
                     <span class="loiq-status <?php echo $is_active ? 'loiq-status-active' : 'loiq-status-inactive'; ?>">
-                        <?php echo $is_active ? 'Actief' : 'Uitgeschakeld'; ?>
+                        <?php echo $is_active ? esc_html__('Actief', 'loiq-wp-agent') : esc_html__('Uitgeschakeld', 'loiq-wp-agent'); ?>
                     </span>
                     <?php if ($is_active): ?>
-                        &nbsp; tot <?php echo date_i18n('d-m-Y H:i', $enabled_until); ?>
-                        (<?php echo human_time_diff(time(), $enabled_until); ?> resterend)
+                        &nbsp; <?php echo esc_html(sprintf(__('tot %s', 'loiq-wp-agent'), date_i18n('d-m-Y H:i', $enabled_until))); ?>
+                        (<?php echo esc_html(sprintf(__('%s resterend', 'loiq-wp-agent'), human_time_diff(time(), $enabled_until))); ?>)
                     <?php endif; ?>
                 </p>
 
                 <p>
                     <?php if ($is_active): ?>
-                        <button type="button" class="button loiq-btn" onclick="disableDebug()">Uitschakelen</button>
+                        <button type="button" class="button loiq-btn" onclick="disableDebug()"><?php esc_html_e('Uitschakelen', 'loiq-wp-agent'); ?></button>
                     <?php endif; ?>
-                    <button type="button" class="button loiq-btn" onclick="enableDebug(1)">Activeer 1 uur</button>
-                    <button type="button" class="button loiq-btn" onclick="enableDebug(24)">Activeer 24 uur</button>
-                    <button type="button" class="button loiq-btn" onclick="enableDebug(168)">Activeer 1 week</button>
+                    <button type="button" class="button loiq-btn" onclick="enableDebug(1)"><?php esc_html_e('Activeer 1 uur', 'loiq-wp-agent'); ?></button>
+                    <button type="button" class="button loiq-btn" onclick="enableDebug(24)"><?php esc_html_e('Activeer 24 uur', 'loiq-wp-agent'); ?></button>
+                    <button type="button" class="button loiq-btn" onclick="enableDebug(168)"><?php esc_html_e('Activeer 1 week', 'loiq-wp-agent'); ?></button>
                 </p>
 
                 <?php if ($mu_plugin_installed): ?>
                 <div class="loiq-help" style="margin-top: 15px;">
-                    <strong>Managed Debug Logging actief.</strong>
-                    WP_DEBUG_LOG wordt automatisch aan/uit gezet met de timer hierboven.
+                    <strong><?php esc_html_e('Managed Debug Logging actief.', 'loiq-wp-agent'); ?></strong>
+                    <?php esc_html_e('WP_DEBUG_LOG wordt automatisch aan/uit gezet met de timer hierboven.', 'loiq-wp-agent'); ?>
                     <?php if ($is_active): ?>
-                        Debug logging is nu <strong>AAN</strong>.
+                        <?php echo wp_kses(sprintf(__('Debug logging is nu %sAAN%s.', 'loiq-wp-agent'), '<strong>', '</strong>'), array('strong' => array())); ?>
                     <?php else: ?>
-                        Debug logging is nu <strong>UIT</strong>.
+                        <?php echo wp_kses(sprintf(__('Debug logging is nu %sUIT%s.', 'loiq-wp-agent'), '<strong>', '</strong>'), array('strong' => array())); ?>
                     <?php endif; ?>
-                    <br><small>Opt-out: voeg <code>define('LOIQ_AGENT_UNMANAGED', true);</code> toe aan wp-config.php</small>
+                    <br><small><?php echo wp_kses(sprintf(__('Opt-out: voeg %s toe aan wp-config.php', 'loiq-wp-agent'), "<code>define('LOIQ_AGENT_UNMANAGED', true);</code>"), array('code' => array())); ?></small>
                 </div>
                 <?php else: ?>
                 <div class="loiq-help" style="margin-top: 15px; border-left-color: #dba617;">
-                    <strong>Managed Debug Logging niet actief.</strong>
-                    <button type="button" class="button button-small" onclick="installMuPlugin()">Installeer mu-plugin</button>
-                    <br><small>Koppelt WP_DEBUG_LOG aan de timer zodat debug logging automatisch stopt.</small>
+                    <strong><?php esc_html_e('Managed Debug Logging niet actief.', 'loiq-wp-agent'); ?></strong>
+                    <button type="button" class="button button-small" onclick="installMuPlugin()"><?php esc_html_e('Installeer mu-plugin', 'loiq-wp-agent'); ?></button>
+                    <br><small><?php esc_html_e('Koppelt WP_DEBUG_LOG aan de timer zodat debug logging automatisch stopt.', 'loiq-wp-agent'); ?></small>
                 </div>
                 <?php endif; ?>
             </div>
 
             <div class="loiq-card">
-                <h2>Token Beheer</h2>
+                <h2><?php esc_html_e('Token Beheer', 'loiq-wp-agent'); ?></h2>
                 <p>
-                    <button type="button" class="button" onclick="regenerateToken()">Regenereer Token</button>
-                    <span class="description">Dit maakt het huidige token ongeldig.</span>
+                    <button type="button" class="button" onclick="regenerateToken()"><?php esc_html_e('Regenereer Token', 'loiq-wp-agent'); ?></button>
+                    <span class="description"><?php esc_html_e('Dit maakt het huidige token ongeldig.', 'loiq-wp-agent'); ?></span>
                 </p>
             </div>
 
             <div class="loiq-card">
-                <h2>Gebruik</h2>
+                <h2><?php esc_html_e('Gebruik', 'loiq-wp-agent'); ?></h2>
                 <div class="loiq-help">
                     <p><strong>Endpoint:</strong> <code><?php echo esc_url(rest_url('claude/v1/status')); ?></code></p>
                     <p><strong>Header:</strong> <code>X-Claude-Token: &lt;jouw-token&gt;</code></p>
@@ -828,7 +828,7 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
 
                 <h3>Read Endpoints (v1)</h3>
                 <table class="loiq-table">
-                    <tr><th>Endpoint</th><th>Beschrijving</th></tr>
+                    <tr><th><?php esc_html_e('Endpoint', 'loiq-wp-agent'); ?></th><th><?php esc_html_e('Beschrijving', 'loiq-wp-agent'); ?></th></tr>
                     <tr><td><code>GET /claude/v1/status</code></td><td>WP versie, PHP, memory, debug mode</td></tr>
                     <tr><td><code>GET /claude/v1/errors</code></td><td>Laatste regels debug.log (?lines=50)</td></tr>
                     <tr><td><code>GET /claude/v1/plugins</code></td><td>Plugins lijst met update status</td></tr>
@@ -842,7 +842,7 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
 
                 <h3>Write Endpoints (v2) — vereist Power Mode</h3>
                 <table class="loiq-table">
-                    <tr><th>Endpoint</th><th>Power Mode</th><th>Beschrijving</th></tr>
+                    <tr><th><?php esc_html_e('Endpoint', 'loiq-wp-agent'); ?></th><th><?php esc_html_e('Power Mode', 'loiq-wp-agent'); ?></th><th><?php esc_html_e('Beschrijving', 'loiq-wp-agent'); ?></th></tr>
                     <tr><td><code>POST /claude/v2/css/deploy</code></td><td>css</td><td>CSS deployen naar child theme, Divi, of customizer</td></tr>
                     <tr><td><code>POST /claude/v2/option/update</code></td><td>options</td><td>Whitelisted WP opties bijwerken</td></tr>
                     <tr><td><code>POST /claude/v2/plugin/toggle</code></td><td>plugins</td><td>Plugin activeren/deactiveren</td></tr>
@@ -855,7 +855,7 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
 
                 <h3>Site Builder Endpoints (v3) — vereist Power Mode</h3>
                 <table class="loiq-table">
-                    <tr><th>Endpoint</th><th>Power Mode</th><th>Beschrijving</th></tr>
+                    <tr><th><?php esc_html_e('Endpoint', 'loiq-wp-agent'); ?></th><th><?php esc_html_e('Power Mode', 'loiq-wp-agent'); ?></th><th><?php esc_html_e('Beschrijving', 'loiq-wp-agent'); ?></th></tr>
                     <tr><td><code>POST /claude/v3/page/create</code></td><td>content</td><td>Pagina aanmaken met Divi content of template</td></tr>
                     <tr><td><code>POST /claude/v3/page/clone</code></td><td>content</td><td>Pagina dupliceren als draft</td></tr>
                     <tr><td><code>GET /claude/v3/page/list</code></td><td>&mdash;</td><td>Pagina's lijst met status en Divi info</td></tr>
@@ -887,12 +887,12 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
             </div>
 
             <div class="loiq-card">
-                <h2>IP Whitelist (optioneel)</h2>
-                <p>Laat leeg om alle IPs toe te staan. Eén IP per regel.</p>
+                <h2><?php esc_html_e('IP Whitelist (optioneel)', 'loiq-wp-agent'); ?></h2>
+                <p><?php esc_html_e('Laat leeg om alle IPs toe te staan. Een IP per regel.', 'loiq-wp-agent'); ?></p>
                 <form method="post" action="options.php">
                     <?php settings_fields('loiq_agent_settings'); ?>
                     <textarea name="loiq_agent_ip_whitelist" rows="4" style="width: 100%; font-family: monospace;"><?php echo esc_textarea(get_option('loiq_agent_ip_whitelist', '')); ?></textarea>
-                    <?php submit_button('Opslaan', 'secondary'); ?>
+                    <?php submit_button(__('Opslaan', 'loiq-wp-agent'), 'secondary'); ?>
                 </form>
             </div>
 
@@ -914,8 +914,8 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
             ];
             ?>
             <div class="loiq-card">
-                <h2>Power Modes (v3.0)</h2>
-                <p>Per-categorie write permissions. Standaard alles uitgeschakeld (fail-closed).</p>
+                <h2><?php esc_html_e('Power Modes (v3.0)', 'loiq-wp-agent'); ?></h2>
+                <p><?php esc_html_e('Per-categorie write permissions. Standaard alles uitgeschakeld (fail-closed).', 'loiq-wp-agent'); ?></p>
                 <div class="loiq-power-modes">
                     <?php foreach ($mode_labels as $key => $info): ?>
                     <label>
@@ -928,7 +928,7 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
                     <?php endforeach; ?>
                 </div>
                 <p style="margin-top: 10px;">
-                    <button type="button" class="button" onclick="savePowerModes()">Opslaan</button>
+                    <button type="button" class="button" onclick="savePowerModes()"><?php esc_html_e('Opslaan', 'loiq-wp-agent'); ?></button>
                     <span class="description">Write rate limit: <?php echo LOIQ_Agent_Safeguards::WRITE_RATE_LIMIT_MINUTE; ?>/min, <?php echo LOIQ_Agent_Safeguards::WRITE_RATE_LIMIT_HOUR; ?>/uur</span>
                 </p>
             </div>
@@ -938,12 +938,12 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
             $snapshots = LOIQ_Agent_Safeguards::get_snapshots(10);
             ?>
             <div class="loiq-card">
-                <h2>Recente Snapshots (v2.0)</h2>
+                <h2><?php esc_html_e('Recente Snapshots (v2.0)', 'loiq-wp-agent'); ?></h2>
                 <?php if (empty($snapshots)): ?>
-                    <p>Nog geen snapshots. Snapshots worden aangemaakt bij write operaties via de v2 API.</p>
+                    <p><?php esc_html_e('Nog geen snapshots. Snapshots worden aangemaakt bij write operaties via de v2 API.', 'loiq-wp-agent'); ?></p>
                 <?php else: ?>
                 <table class="loiq-table">
-                    <tr><th>ID</th><th>Type</th><th>Target</th><th>Status</th><th>Tijd</th><th>Actie</th></tr>
+                    <tr><th>ID</th><th>Type</th><th>Target</th><th><?php esc_html_e('Status', 'loiq-wp-agent'); ?></th><th><?php esc_html_e('Tijd', 'loiq-wp-agent'); ?></th><th><?php esc_html_e('Actie', 'loiq-wp-agent'); ?></th></tr>
                     <?php foreach ($snapshots as $snap): ?>
                     <tr>
                         <td><?php echo esc_html($snap['id']); ?></td>
@@ -951,9 +951,9 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
                         <td class="loiq-code"><?php echo esc_html(substr($snap['target_key'], 0, 40)); ?></td>
                         <td>
                             <?php if ($snap['rolled_back']): ?>
-                                <span class="loiq-badge loiq-badge-rollback">Teruggedraaid</span>
+                                <span class="loiq-badge loiq-badge-rollback"><?php esc_html_e('Teruggedraaid', 'loiq-wp-agent'); ?></span>
                             <?php elseif ($snap['executed']): ?>
-                                <span class="loiq-badge loiq-badge-executed">Uitgevoerd</span>
+                                <span class="loiq-badge loiq-badge-executed"><?php esc_html_e('Uitgevoerd', 'loiq-wp-agent'); ?></span>
                             <?php else: ?>
                                 <span class="loiq-badge loiq-badge-dryrun">Dry-run</span>
                             <?php endif; ?>
@@ -977,12 +977,12 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
             $deployed_snippets = LOIQ_Agent_Safeguards::get_deployed_snippets();
             ?>
             <div class="loiq-card">
-                <h2>Gedeployde Snippets (v2.0)</h2>
+                <h2><?php esc_html_e('Gedeployde Snippets (v2.0)', 'loiq-wp-agent'); ?></h2>
                 <?php if (empty($deployed_snippets)): ?>
-                    <p>Geen actieve snippets. Deploy via <code>POST /claude/v2/snippet/deploy</code>.</p>
+                    <p><?php echo wp_kses(sprintf(__('Geen actieve snippets. Deploy via %s.', 'loiq-wp-agent'), '<code>POST /claude/v2/snippet/deploy</code>'), array('code' => array())); ?></p>
                 <?php else: ?>
                 <table class="loiq-table">
-                    <tr><th>Naam</th><th>Bestand</th><th>Grootte</th><th>Laatst gewijzigd</th><th>Actie</th></tr>
+                    <tr><th><?php esc_html_e('Naam', 'loiq-wp-agent'); ?></th><th><?php esc_html_e('Bestand', 'loiq-wp-agent'); ?></th><th><?php esc_html_e('Grootte', 'loiq-wp-agent'); ?></th><th><?php esc_html_e('Laatst gewijzigd', 'loiq-wp-agent'); ?></th><th><?php esc_html_e('Actie', 'loiq-wp-agent'); ?></th></tr>
                     <?php foreach ($deployed_snippets as $snippet): ?>
                     <tr>
                         <td><strong><?php echo esc_html($snippet['name']); ?></strong></td>
@@ -990,7 +990,7 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
                         <td><?php echo esc_html(size_format($snippet['size'])); ?></td>
                         <td><?php echo esc_html($snippet['modified']); ?></td>
                         <td>
-                            <button type="button" class="button button-small" style="color:#721c24;" onclick="removeSnippet('<?php echo esc_js($snippet['name']); ?>')">Verwijderen</button>
+                            <button type="button" class="button button-small" style="color:#721c24;" onclick="removeSnippet('<?php echo esc_js($snippet['name']); ?>')"><?php esc_html_e('Verwijderen', 'loiq-wp-agent'); ?></button>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -1001,10 +1001,10 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
 
             <?php if (!empty($recent_requests)): ?>
             <div class="loiq-card">
-                <h2>Request Log (laatste 20)</h2>
-                <p><button type="button" class="button" onclick="clearLog()">Log Wissen</button></p>
+                <h2><?php esc_html_e('Request Log (laatste 20)', 'loiq-wp-agent'); ?></h2>
+                <p><button type="button" class="button" onclick="clearLog()"><?php esc_html_e('Log Wissen', 'loiq-wp-agent'); ?></button></p>
                 <table class="loiq-table">
-                    <tr><th>Tijd</th><th>Endpoint</th><th>IP</th><th>Status</th></tr>
+                    <tr><th><?php esc_html_e('Tijd', 'loiq-wp-agent'); ?></th><th><?php esc_html_e('Endpoint', 'loiq-wp-agent'); ?></th><th>IP</th><th><?php esc_html_e('Status', 'loiq-wp-agent'); ?></th></tr>
                     <?php foreach ($recent_requests as $req): ?>
                     <tr>
                         <td><?php echo esc_html($req->created_at); ?></td>
@@ -1018,7 +1018,7 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
             <?php endif; ?>
 
             <div class="loiq-card">
-                <h2>Security Features</h2>
+                <h2><?php esc_html_e('Security Features', 'loiq-wp-agent'); ?></h2>
                 <ul>
                     <li>Token verificatie (password_hash)</li>
                     <li>HTTPS verplicht (behalve localhost)</li>
@@ -1040,26 +1040,26 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
         function copyToken() {
             var token = document.getElementById('new-token').textContent.replace('NIEUW - Kopieer nu! ', '');
             navigator.clipboard.writeText(token).then(function() {
-                alert('Token gekopieerd!');
+                alert('<?php echo esc_js(__('Token gekopieerd!', 'loiq-wp-agent')); ?>');
             });
         }
 
         function copyTerminal() {
             var prompt = document.getElementById('terminal-prompt').textContent;
             navigator.clipboard.writeText(prompt).then(function() {
-                alert('Terminal prompt gekopieerd!');
+                alert('<?php echo esc_js(__('Terminal prompt gekopieerd!', 'loiq-wp-agent')); ?>');
             });
         }
 
         function copyAiPrompt() {
             var prompt = document.getElementById('ai-dev-prompt').textContent;
             navigator.clipboard.writeText(prompt).then(function() {
-                alert('AI Dev prompt gekopieerd! Geef aan je developer.');
+                alert('<?php echo esc_js(__('AI Dev prompt gekopieerd! Geef aan je developer.', 'loiq-wp-agent')); ?>');
             });
         }
 
         function regenerateToken() {
-            if (!confirm('Weet je zeker dat je een nieuw token wilt genereren? Het huidige token wordt ongeldig.')) return;
+            if (!confirm('<?php echo esc_js(__('Weet je zeker dat je een nieuw token wilt genereren? Het huidige token wordt ongeldig.', 'loiq-wp-agent')); ?>')) return;
 
             jQuery.post(ajaxurl, {
                 action: 'loiq_agent_regenerate_token',
@@ -1068,7 +1068,7 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
                 if (response.success) {
                     location.reload();
                 } else {
-                    alert('Fout: ' + response.data);
+                    alert('<?php echo esc_js(__('Fout:', 'loiq-wp-agent')); ?> ' + response.data);
                 }
             });
         }
@@ -1082,7 +1082,7 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
                 if (response.success) {
                     location.reload();
                 } else {
-                    alert('Fout: ' + response.data);
+                    alert('<?php echo esc_js(__('Fout:', 'loiq-wp-agent')); ?> ' + response.data);
                 }
             });
         }
@@ -1095,13 +1095,13 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
                 if (response.success) {
                     location.reload();
                 } else {
-                    alert('Fout: ' + response.data);
+                    alert('<?php echo esc_js(__('Fout:', 'loiq-wp-agent')); ?> ' + response.data);
                 }
             });
         }
 
         function clearLog() {
-            if (!confirm('Weet je zeker dat je de log wilt wissen?')) return;
+            if (!confirm('<?php echo esc_js(__('Weet je zeker dat je de log wilt wissen?', 'loiq-wp-agent')); ?>')) return;
 
             jQuery.post(ajaxurl, {
                 action: 'loiq_agent_clear_log',
@@ -1110,7 +1110,7 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
                 if (response.success) {
                     location.reload();
                 } else {
-                    alert('Fout: ' + response.data);
+                    alert('<?php echo esc_js(__('Fout:', 'loiq-wp-agent')); ?> ' + response.data);
                 }
             });
         }
@@ -1123,7 +1123,7 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
                 if (response.success) {
                     location.reload();
                 } else {
-                    alert('Fout: ' + response.data);
+                    alert('<?php echo esc_js(__('Fout:', 'loiq-wp-agent')); ?> ' + response.data);
                 }
             });
         }
@@ -1142,13 +1142,13 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
                 if (response.success) {
                     location.reload();
                 } else {
-                    alert('Fout: ' + response.data);
+                    alert('<?php echo esc_js(__('Fout:', 'loiq-wp-agent')); ?> ' + response.data);
                 }
             });
         }
 
         function rollbackSnapshot(id) {
-            if (!confirm('Snapshot #' + id + ' terugdraaien? De vorige staat wordt hersteld.')) return;
+            if (!confirm('<?php echo esc_js(__('Snapshot #', 'loiq-wp-agent')); ?>' + id + ' <?php echo esc_js(__('terugdraaien? De vorige staat wordt hersteld.', 'loiq-wp-agent')); ?>')) return;
 
             jQuery.post(ajaxurl, {
                 action: 'loiq_agent_rollback',
@@ -1156,16 +1156,16 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
                 _wpnonce: '<?php echo wp_create_nonce('loiq_agent_nonce'); ?>'
             }, function(response) {
                 if (response.success) {
-                    alert('Snapshot #' + id + ' teruggedraaid.');
+                    alert('<?php echo esc_js(__('Snapshot #', 'loiq-wp-agent')); ?>' + id + ' <?php echo esc_js(__('teruggedraaid.', 'loiq-wp-agent')); ?>');
                     location.reload();
                 } else {
-                    alert('Fout: ' + response.data);
+                    alert('<?php echo esc_js(__('Fout:', 'loiq-wp-agent')); ?> ' + response.data);
                 }
             });
         }
 
         function removeSnippet(name) {
-            if (!confirm('Snippet "' + name + '" verwijderen? Dit kan de site beinvloeden.')) return;
+            if (!confirm('<?php echo esc_js(__('Snippet "', 'loiq-wp-agent')); ?>' + name + '<?php echo esc_js(__('" verwijderen? Dit kan de site beinvloeden.', 'loiq-wp-agent')); ?>')) return;
 
             jQuery.post(ajaxurl, {
                 action: 'loiq_agent_remove_snippet',
@@ -1175,7 +1175,7 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
                 if (response.success) {
                     location.reload();
                 } else {
-                    alert('Fout: ' + response.data);
+                    alert('<?php echo esc_js(__('Fout:', 'loiq-wp-agent')); ?> ' + response.data);
                 }
             });
         }
@@ -1190,11 +1190,11 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
     /**
      * Regenerate token
      */
-    public function ajax_regenerate_token() {
+    public function ajax_regenerate_token(): void {
         check_ajax_referer('loiq_agent_nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Geen toegang');
+            wp_send_json_error(__('Geen toegang', 'loiq-wp-agent'));
         }
 
         $token = bin2hex(random_bytes(32));
@@ -1207,11 +1207,11 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
     /**
      * Enable debug for X hours
      */
-    public function ajax_enable() {
+    public function ajax_enable(): void {
         check_ajax_referer('loiq_agent_nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Geen toegang');
+            wp_send_json_error(__('Geen toegang', 'loiq-wp-agent'));
         }
 
         $hours = absint(sanitize_text_field($_POST['hours'] ?? self::DEFAULT_HOURS));
@@ -1225,11 +1225,11 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
     /**
      * Disable debug
      */
-    public function ajax_disable() {
+    public function ajax_disable(): void {
         check_ajax_referer('loiq_agent_nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Geen toegang');
+            wp_send_json_error(__('Geen toegang', 'loiq-wp-agent'));
         }
 
         update_option('loiq_agent_enabled_until', 0);
@@ -1240,11 +1240,11 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
     /**
      * Clear request log
      */
-    public function ajax_clear_log() {
+    public function ajax_clear_log(): void {
         check_ajax_referer('loiq_agent_nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Geen toegang');
+            wp_send_json_error(__('Geen toegang', 'loiq-wp-agent'));
         }
 
         global $wpdb;
@@ -1256,11 +1256,11 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
     /**
      * Install mu-plugin for managed debug logging
      */
-    public function ajax_install_mu() {
+    public function ajax_install_mu(): void {
         check_ajax_referer('loiq_agent_nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Geen toegang');
+            wp_send_json_error(__('Geen toegang', 'loiq-wp-agent'));
         }
 
         $result = self::install_mu_plugin();
@@ -1278,11 +1278,11 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
     /**
      * Save power modes from admin UI
      */
-    public function ajax_save_power_modes() {
+    public function ajax_save_power_modes(): void {
         check_ajax_referer('loiq_agent_nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Geen toegang');
+            wp_send_json_error(__('Geen toegang', 'loiq-wp-agent'));
         }
 
         $modes = isset($_POST['modes']) && is_array($_POST['modes']) ? $_POST['modes'] : [];
@@ -1298,16 +1298,16 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
     /**
      * Rollback a snapshot from admin UI
      */
-    public function ajax_rollback() {
+    public function ajax_rollback(): void {
         check_ajax_referer('loiq_agent_nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Geen toegang');
+            wp_send_json_error(__('Geen toegang', 'loiq-wp-agent'));
         }
 
         $snapshot_id = absint($_POST['snapshot_id'] ?? 0);
         if ($snapshot_id <= 0) {
-            wp_send_json_error('Ongeldig snapshot ID');
+            wp_send_json_error(__('Ongeldig snapshot ID', 'loiq-wp-agent'));
         }
 
         $result = LOIQ_Agent_Safeguards::rollback_snapshot($snapshot_id);
@@ -1321,16 +1321,16 @@ Alle write endpoints hebben dry_run + snapshot/rollback. Rate limit: 10 writes/m
     /**
      * Remove a deployed snippet from admin UI
      */
-    public function ajax_remove_snippet() {
+    public function ajax_remove_snippet(): void {
         check_ajax_referer('loiq_agent_nonce');
 
         if (!current_user_can('manage_options')) {
-            wp_send_json_error('Geen toegang');
+            wp_send_json_error(__('Geen toegang', 'loiq-wp-agent'));
         }
 
         $name = sanitize_file_name($_POST['name'] ?? '');
         if (empty($name)) {
-            wp_send_json_error('Snippet naam ontbreekt');
+            wp_send_json_error(__('Snippet naam ontbreekt', 'loiq-wp-agent'));
         }
 
         $result = LOIQ_Agent_Safeguards::remove_snippet($name);
@@ -1431,7 +1431,7 @@ class LOIQ_WP_Agent_Updater {
     /**
      * Fix folder name after unzip (GitHub adds -tag suffix)
      */
-    public function fix_source_dir($source, $remote_source, $upgrader, $hook_extra) {
+    public function fix_source_dir(string $source, string $remote_source, $upgrader, array $hook_extra): string {
         if (!isset($hook_extra['plugin']) || $hook_extra['plugin'] !== $this->plugin_file) {
             return $source;
         }
@@ -1450,7 +1450,7 @@ class LOIQ_WP_Agent_Updater {
     /**
      * Show admin notice after update check
      */
-    public function show_update_notice() {
+    public function show_update_notice(): void {
         $message = get_transient('loiq_update_notice');
         if (!$message) return;
         delete_transient('loiq_update_notice');
@@ -1461,7 +1461,7 @@ class LOIQ_WP_Agent_Updater {
     /**
      * Add "Check for updates" action link on the plugins page
      */
-    public function add_check_update_link($links) {
+    public function add_check_update_link(array $links): array {
         $check_url = wp_nonce_url(
             admin_url('plugins.php?loiq_check_update=1'),
             'loiq_check_update'
@@ -1473,7 +1473,7 @@ class LOIQ_WP_Agent_Updater {
     /**
      * Handle the "Check for updates" click — clear cache, force re-check
      */
-    public function handle_check_update() {
+    public function handle_check_update(): void {
         if (empty($_GET['loiq_check_update']) || !current_user_can('update_plugins')) {
             return;
         }
@@ -1490,9 +1490,9 @@ class LOIQ_WP_Agent_Updater {
         // Check if an update was found
         $remote = $this->get_remote_version();
         if ($remote && version_compare(LOIQ_AGENT_VERSION, $remote['version'], '<')) {
-            $message = 'LOIQ WP Agent update gevonden: v' . $remote['version'];
+            $message = sprintf(__('LOIQ WP Agent update gevonden: v%s', 'loiq-wp-agent'), $remote['version']);
         } else {
-            $message = 'LOIQ WP Agent is up-to-date (v' . LOIQ_AGENT_VERSION . ')';
+            $message = sprintf(__('LOIQ WP Agent is up-to-date (v%s)', 'loiq-wp-agent'), LOIQ_AGENT_VERSION);
         }
 
         // Redirect back with admin notice
@@ -1504,7 +1504,7 @@ class LOIQ_WP_Agent_Updater {
     /**
      * Get latest release info from GitHub
      */
-    private function get_remote_version() {
+    private function get_remote_version(): ?array {
         // Check cache first
         $cached = get_transient($this->cache_key);
         if ($cached !== false) {

@@ -17,7 +17,7 @@ class LOIQ_Agent_Forms_Endpoints {
      *
      * @param LOIQ_WP_Agent $plugin  Reference to main plugin for permission callbacks
      */
-    public static function register_routes($plugin) {
+    public static function register_routes(LOIQ_WP_Agent $plugin): void {
         $namespace = 'claude/v3';
 
         // --- WRITE ENDPOINTS ---

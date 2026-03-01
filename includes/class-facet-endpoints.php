@@ -17,7 +17,7 @@ class LOIQ_Agent_Facet_Endpoints {
      *
      * @param LOIQ_WP_Agent $plugin  Reference to main plugin for permission callbacks
      */
-    public static function register_routes($plugin) {
+    public static function register_routes(LOIQ_WP_Agent $plugin): void {
         $namespace = 'claude/v3';
 
         // --- READ ENDPOINTS ---
@@ -91,7 +91,7 @@ class LOIQ_Agent_Facet_Endpoints {
      *
      * @return array
      */
-    private static function get_settings() {
+    private static function get_settings(): array {
         $settings = get_option('facetwp_settings', '');
 
         // FacetWP stores settings as serialized or JSON string
@@ -118,7 +118,7 @@ class LOIQ_Agent_Facet_Endpoints {
      *
      * @param array $settings
      */
-    private static function save_settings($settings) {
+    private static function save_settings(array $settings): void {
         // FacetWP expects JSON-encoded settings
         $current = get_option('facetwp_settings', '');
 
@@ -138,7 +138,7 @@ class LOIQ_Agent_Facet_Endpoints {
      * @param string $name
      * @return int|false  Array index or false
      */
-    private static function find_facet_index($settings, $name) {
+    private static function find_facet_index(array $settings, string $name) {
         if (empty($settings['facets']) || !is_array($settings['facets'])) {
             return false;
         }
@@ -159,7 +159,7 @@ class LOIQ_Agent_Facet_Endpoints {
      * @param string $name
      * @return int|false  Array index or false
      */
-    private static function find_template_index($settings, $name) {
+    private static function find_template_index(array $settings, string $name) {
         if (empty($settings['templates']) || !is_array($settings['templates'])) {
             return false;
         }

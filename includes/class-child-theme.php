@@ -30,7 +30,7 @@ class LOIQ_Agent_Child_Theme {
      *
      * @param LOIQ_WP_Agent $plugin  Reference to main plugin for permission callbacks
      */
-    public static function register_routes($plugin) {
+    public static function register_routes(LOIQ_WP_Agent $plugin): void {
         $namespace = 'claude/v3';
 
         // --- CHILD THEME ENDPOINTS ---
@@ -685,7 +685,7 @@ PHP;
      * @param string $session_id
      * @return string
      */
-    private static function build_tagged_block($name, $code, $deployed_date, $session_id) {
+    private static function build_tagged_block(string $name, string $code, string $deployed_date, string $session_id): string {
         $lines = [];
         $lines[] = '// === LOIQ-AGENT:' . $name . ' START ===';
         $lines[] = '// Deployed: ' . $deployed_date . ' | Session: ' . $session_id;
@@ -702,7 +702,7 @@ PHP;
      * @param string $name
      * @return array|null  Array with 'content', 'line_start', 'line_end' or null if not found
      */
-    private static function extract_block($content, $name) {
+    private static function extract_block(string $content, string $name): ?array {
         $escaped_name = preg_quote($name, '/');
         $pattern = '/^\/\/ === LOIQ-AGENT:' . $escaped_name . ' START ===$/m';
 
@@ -748,7 +748,7 @@ PHP;
      * @param string $name
      * @return string  Content with block removed
      */
-    private static function remove_block($content, $name) {
+    private static function remove_block(string $content, string $name): string {
         $escaped_name = preg_quote($name, '/');
         // Match the full block including optional surrounding blank lines
         $pattern = '/\n?\n?\/\/ === LOIQ-AGENT:' . $escaped_name . ' START ===\n.*?\/\/ === LOIQ-AGENT:' . $escaped_name . ' END ===\n?/s';
@@ -767,7 +767,7 @@ PHP;
      * @param string $content
      * @return array  Array of block info objects
      */
-    private static function parse_all_blocks($content) {
+    private static function parse_all_blocks(string $content): array {
         $blocks = [];
         $lines = explode("\n", $content);
         $total_lines = count($lines);
@@ -819,7 +819,7 @@ PHP;
      * @param string $code  The PHP code to check (without <?php tag)
      * @return true|WP_Error
      */
-    private static function check_php_syntax($code) {
+    private static function check_php_syntax(string $code) {
         $full = "<?php\nif (!defined('ABSPATH')) exit;\n" . $code;
 
         try {

@@ -22,7 +22,7 @@ class LOIQ_Agent_Audit {
      * @param string $session_id   Claude session identifier
      * @param bool   $dry_run      Was this a dry-run?
      */
-    public static function log_write($endpoint, $status_code, $action_type = '', $target_key = '', $session_id = '', $dry_run = false) {
+    public static function log_write(string $endpoint, int $status_code, string $action_type = '', string $target_key = '', string $session_id = '', bool $dry_run = false): void {
         global $wpdb;
         $table = $wpdb->prefix . 'loiq_agent_log';
 
@@ -57,7 +57,7 @@ class LOIQ_Agent_Audit {
      * @param string $action_type  Optional filter by action type
      * @return array
      */
-    public static function get_write_history($limit = 20, $action_type = '') {
+    public static function get_write_history(int $limit = 20, string $action_type = ''): array {
         global $wpdb;
         $table = $wpdb->prefix . 'loiq_agent_snapshots';
 
@@ -100,7 +100,7 @@ class LOIQ_Agent_Audit {
      * @param string $session_id
      * @return array
      */
-    public static function get_session_history($session_id) {
+    public static function get_session_history(string $session_id): array {
         global $wpdb;
         $table = $wpdb->prefix . 'loiq_agent_snapshots';
 
@@ -131,46 +131,60 @@ class LOIQ_Agent_Audit {
      * @param object $row
      * @return string
      */
-    private static function format_summary($row) {
+    private static function format_summary(object $row): string {
         $action = $row->action_type;
         $target = $row->target_key;
         $status = '';
 
         if ($row->rolled_back) {
-            $status = ' (teruggedraaid)';
+            $status = ' (' . __('teruggedraaid', 'loiq-wp-agent') . ')';
         } elseif (!$row->executed) {
             $status = ' (dry-run)';
         }
 
         switch ($action) {
             case 'css':
-                return "CSS deploy naar {$target}{$status}";
+                /* translators: 1: CSS target, 2: status suffix */
+                return sprintf(__('CSS deploy naar %1$s%2$s', 'loiq-wp-agent'), $target, $status);
             case 'option':
-                return "Option '{$target}' bijgewerkt{$status}";
+                /* translators: 1: option name, 2: status suffix */
+                return sprintf(__('Option \'%1$s\' bijgewerkt%2$s', 'loiq-wp-agent'), $target, $status);
             case 'plugin':
-                return "Plugin '{$target}' getoggled{$status}";
+                /* translators: 1: plugin name, 2: status suffix */
+                return sprintf(__('Plugin \'%1$s\' getoggled%2$s', 'loiq-wp-agent'), $target, $status);
             case 'content':
-                return "Post #{$target} bijgewerkt{$status}";
+                /* translators: 1: post ID, 2: status suffix */
+                return sprintf(__('Post #%1$s bijgewerkt%2$s', 'loiq-wp-agent'), $target, $status);
             case 'snippet':
-                return "Snippet '{$target}' gedeployed{$status}";
+                /* translators: 1: snippet name, 2: status suffix */
+                return sprintf(__('Snippet \'%1$s\' gedeployed%2$s', 'loiq-wp-agent'), $target, $status);
             case 'divi':
-                return "Divi layout #{$target} bijgewerkt{$status}";
+                /* translators: 1: layout ID, 2: status suffix */
+                return sprintf(__('Divi layout #%1$s bijgewerkt%2$s', 'loiq-wp-agent'), $target, $status);
             case 'theme_builder':
-                return "Theme Builder template #{$target} bijgewerkt{$status}";
+                /* translators: 1: template ID, 2: status suffix */
+                return sprintf(__('Theme Builder template #%1$s bijgewerkt%2$s', 'loiq-wp-agent'), $target, $status);
             case 'child_theme':
-                return "functions.php block '{$target}' gewijzigd{$status}";
+                /* translators: 1: block name, 2: status suffix */
+                return sprintf(__('functions.php block \'%1$s\' gewijzigd%2$s', 'loiq-wp-agent'), $target, $status);
             case 'menu':
-                return "Menu '{$target}' gewijzigd{$status}";
+                /* translators: 1: menu name, 2: status suffix */
+                return sprintf(__('Menu \'%1$s\' gewijzigd%2$s', 'loiq-wp-agent'), $target, $status);
             case 'media':
-                return "Media #{$target} geüpload{$status}";
+                /* translators: 1: media ID, 2: status suffix */
+                return sprintf(__('Media #%1$s geupload%2$s', 'loiq-wp-agent'), $target, $status);
             case 'form':
-                return "Gravity Form #{$target} gewijzigd{$status}";
+                /* translators: 1: form ID, 2: status suffix */
+                return sprintf(__('Gravity Form #%1$s gewijzigd%2$s', 'loiq-wp-agent'), $target, $status);
             case 'facet':
-                return "FacetWP configuratie bijgewerkt{$status}";
+                /* translators: %s: status suffix */
+                return sprintf(__('FacetWP configuratie bijgewerkt%s', 'loiq-wp-agent'), $status);
             case 'taxonomy':
-                return "Taxonomy term '{$target}' gewijzigd{$status}";
+                /* translators: 1: term name, 2: status suffix */
+                return sprintf(__('Taxonomy term \'%1$s\' gewijzigd%2$s', 'loiq-wp-agent'), $target, $status);
             default:
-                return "{$action} op {$target}{$status}";
+                /* translators: 1: action type, 2: target, 3: status suffix */
+                return sprintf(__('%1$s op %2$s%3$s', 'loiq-wp-agent'), $action, $target, $status);
         }
     }
 
@@ -180,7 +194,7 @@ class LOIQ_Agent_Audit {
      *
      * @return string
      */
-    private static function get_anonymized_ip() {
+    private static function get_anonymized_ip(): string {
         $ip = sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'));
 
         // Only trust proxy headers when request comes from configured trusted proxy

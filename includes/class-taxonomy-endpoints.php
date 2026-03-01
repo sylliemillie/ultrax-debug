@@ -20,7 +20,7 @@ class LOIQ_Agent_Taxonomy_Endpoints {
      *
      * @param LOIQ_WP_Agent $plugin  Reference to main plugin for permission callbacks
      */
-    public static function register_routes($plugin) {
+    public static function register_routes(LOIQ_WP_Agent $plugin): void {
         $namespace = 'claude/v3';
 
         // --- TAXONOMY ENDPOINTS ---
@@ -359,7 +359,7 @@ class LOIQ_Agent_Taxonomy_Endpoints {
      * @param string $taxonomy
      * @return array|WP_Error  Sanitized array of term IDs and/or names, or error
      */
-    private static function sanitize_terms_input($terms, $taxonomy) {
+    private static function sanitize_terms_input(array $terms, string $taxonomy) {
         if (!is_array($terms) || empty($terms)) {
             return new WP_Error('invalid_terms', 'Terms moet een niet-lege array zijn', ['status' => 400]);
         }
@@ -397,7 +397,7 @@ class LOIQ_Agent_Taxonomy_Endpoints {
      * @param int    $snapshot_id
      * @param string $target_key
      */
-    private static function update_snapshot_target($snapshot_id, $target_key) {
+    private static function update_snapshot_target(int $snapshot_id, string $target_key): void {
         global $wpdb;
         $table = $wpdb->prefix . 'loiq_agent_snapshots';
 

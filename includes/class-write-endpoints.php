@@ -56,7 +56,7 @@ class LOIQ_Agent_Write_Endpoints {
      *
      * @param LOIQ_WP_Agent $plugin  Reference to main plugin for permission callbacks
      */
-    public static function register_routes($plugin) {
+    public static function register_routes(LOIQ_WP_Agent $plugin): void {
         $namespace = 'claude/v2';
 
         // --- WRITE ENDPOINTS ---
@@ -657,7 +657,7 @@ class LOIQ_Agent_Write_Endpoints {
      * @param string $css Raw CSS input.
      * @return string Sanitized CSS with newlines preserved.
      */
-    public static function sanitize_css_input($css) {
+    public static function sanitize_css_input(string $css): string {
         // Remove script/style tags and their content
         $css = preg_replace('@<(script|style)[^>]*?>.*?</\\1>@si', '', $css);
         // Strip remaining HTML tags
@@ -671,7 +671,7 @@ class LOIQ_Agent_Write_Endpoints {
      * @param string $target
      * @return string|WP_Error
      */
-    private static function get_current_css($target) {
+    private static function get_current_css(string $target) {
         switch ($target) {
             case 'child_theme':
                 $css_file = get_stylesheet_directory() . '/style.css';
@@ -704,7 +704,7 @@ class LOIQ_Agent_Write_Endpoints {
      * @param string $css
      * @return true|WP_Error
      */
-    private static function write_css($target, $css) {
+    private static function write_css(string $target, string $css) {
         switch ($target) {
             case 'child_theme':
                 $css_file = get_stylesheet_directory() . '/style.css';
@@ -744,7 +744,7 @@ class LOIQ_Agent_Write_Endpoints {
      * @param string $after
      * @return string
      */
-    private static function simple_diff($before, $after) {
+    private static function simple_diff(string $before, string $after): string {
         $before_lines = explode("\n", $before);
         $after_lines  = explode("\n", $after);
 
@@ -788,7 +788,7 @@ class LOIQ_Agent_Write_Endpoints {
      * @param string $key
      * @return bool  true if BLOCKED, false if allowed
      */
-    private static function is_blocked_meta_key($key) {
+    private static function is_blocked_meta_key(string $key): bool {
         // Exact match on allow-list
         if (in_array($key, self::$allowed_meta_patterns, true)) {
             return false; // Allowed

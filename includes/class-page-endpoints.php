@@ -30,7 +30,7 @@ class LOIQ_Agent_Page_Endpoints {
      *
      * @param LOIQ_WP_Agent $plugin  Reference to main plugin for permission callbacks
      */
-    public static function register_routes($plugin) {
+    public static function register_routes(LOIQ_WP_Agent $plugin): void {
         $namespace = 'claude/v3';
 
         // --- PAGE ENDPOINTS ---
@@ -351,7 +351,7 @@ class LOIQ_Agent_Page_Endpoints {
      * @param string $content
      * @return bool
      */
-    private static function is_divi_content($content) {
+    private static function is_divi_content(string $content): bool {
         return !empty($content) && strpos($content, '[et_pb_') !== false;
     }
 
@@ -361,7 +361,7 @@ class LOIQ_Agent_Page_Endpoints {
      * @param string $template_name  Template name (without .json extension)
      * @return string|WP_Error       Divi shortcode content or error
      */
-    private static function load_template($template_name) {
+    private static function load_template(string $template_name) {
         $safe_name = sanitize_file_name($template_name);
         $template_file = LOIQ_AGENT_PATH . 'templates/' . $safe_name . '.json';
 
@@ -410,7 +410,7 @@ class LOIQ_Agent_Page_Endpoints {
      * @param int    $snapshot_id
      * @param string $target_key
      */
-    private static function update_snapshot_target($snapshot_id, $target_key) {
+    private static function update_snapshot_target(int $snapshot_id, string $target_key): void {
         global $wpdb;
         $table = $wpdb->prefix . 'loiq_agent_snapshots';
 

@@ -431,7 +431,7 @@ class LOIQ_Agent_Divi_Builder {
     // ROUTE REGISTRATION
     // =========================================================================
 
-    public static function register_routes($plugin) {
+    public static function register_routes(LOIQ_WP_Agent $plugin): void {
         $ns = 'claude/v3';
 
         // Build: JSON → Divi shortcode (write)
@@ -644,7 +644,7 @@ class LOIQ_Agent_Divi_Builder {
      * @param array $json
      * @return string|WP_Error
      */
-    public static function build_shortcode($json) {
+    public static function build_shortcode(array $json) {
         if (empty($json['sections']) || !is_array($json['sections'])) {
             return new WP_Error('no_sections', 'JSON moet een "sections" array bevatten', ['status' => 400]);
         }
@@ -665,7 +665,7 @@ class LOIQ_Agent_Divi_Builder {
      * @param array $node
      * @return string|WP_Error
      */
-    private static function build_node($node) {
+    private static function build_node(array $node) {
         if (empty($node['type'])) {
             return new WP_Error('missing_type', 'Node mist "type" property', ['status' => 400]);
         }
@@ -729,7 +729,7 @@ class LOIQ_Agent_Divi_Builder {
     /**
      * Build attribute string from settings array.
      */
-    private static function build_attrs(array $settings) {
+    private static function build_attrs(array $settings): string {
         if (empty($settings)) return '';
 
         $parts = [];
@@ -753,7 +753,7 @@ class LOIQ_Agent_Divi_Builder {
      * @param string $content  Raw Divi shortcode content
      * @return array|WP_Error
      */
-    public static function parse_shortcode($content) {
+    public static function parse_shortcode(string $content) {
         if (empty($content)) {
             return ['sections' => []];
         }
@@ -773,7 +773,7 @@ class LOIQ_Agent_Divi_Builder {
      * @param string $content
      * @return array|WP_Error
      */
-    private static function tokenize($content) {
+    private static function tokenize(string $content) {
         $tokens = [];
         $pattern = '/\[(\/?)et_pb_(\w+)([^\]]*)\]/';
         $offset = 0;
@@ -818,7 +818,7 @@ class LOIQ_Agent_Divi_Builder {
     /**
      * Parse shortcode attribute string into key-value pairs.
      */
-    private static function parse_attrs($attr_string) {
+    private static function parse_attrs(string $attr_string): array {
         $attrs = [];
         if (empty($attr_string)) return $attrs;
 
@@ -834,7 +834,7 @@ class LOIQ_Agent_Divi_Builder {
     /**
      * Convert token array into a nested tree structure.
      */
-    private static function tokens_to_tree(array $tokens) {
+    private static function tokens_to_tree(array $tokens): array {
         $stack = [];
         $root = [];
         $current = &$root;
@@ -873,7 +873,7 @@ class LOIQ_Agent_Divi_Builder {
     /**
      * Map a Divi tag name back to a node type.
      */
-    private static function tag_to_node($tag, $attrs) {
+    private static function tag_to_node(string $tag, array $attrs): array {
         // Find the module by tag name
         $type = $tag; // default to tag name without et_pb_ prefix
         foreach (self::$module_registry as $name => $meta) {
@@ -903,7 +903,7 @@ class LOIQ_Agent_Divi_Builder {
      * @param string $content
      * @return true|WP_Error
      */
-    public static function validate_structure($content) {
+    public static function validate_structure(string $content) {
         if (empty($content)) {
             return new WP_Error('empty_content', 'Content is leeg', ['status' => 400]);
         }
@@ -953,7 +953,7 @@ class LOIQ_Agent_Divi_Builder {
      * @param string $name
      * @return array|null
      */
-    public static function get_module($name) {
+    public static function get_module(string $name): ?array {
         return self::$module_registry[$name] ?? null;
     }
 
@@ -963,7 +963,7 @@ class LOIQ_Agent_Divi_Builder {
      * @param string $name
      * @return bool
      */
-    public static function module_exists($name) {
+    public static function module_exists(string $name): bool {
         return isset(self::$module_registry[$name]);
     }
 }

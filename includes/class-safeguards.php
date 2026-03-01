@@ -61,7 +61,7 @@ class LOIQ_Agent_Safeguards {
      *
      * @return array<string, bool>
      */
-    public static function get_power_modes() {
+    public static function get_power_modes(): array {
         $stored = get_option('loiq_agent_power_modes', []);
         return wp_parse_args($stored, self::$default_modes);
     }
@@ -73,7 +73,7 @@ class LOIQ_Agent_Safeguards {
      * @param string $category  One of: css, options, plugins, content, snippets
      * @return bool
      */
-    public static function is_enabled($category) {
+    public static function is_enabled(string $category): bool {
         // Timer must be active
         $enabled_until = (int) get_option('loiq_agent_enabled_until', 0);
         if ($enabled_until > 0 && time() > $enabled_until) {
@@ -90,7 +90,7 @@ class LOIQ_Agent_Safeguards {
      * @param string $category
      * @param bool   $enabled
      */
-    public static function set_power_mode($category, $enabled) {
+    public static function set_power_mode(string $category, bool $enabled): void {
         $modes = self::get_power_modes();
         if (!array_key_exists($category, self::$default_modes)) {
             return;
@@ -104,7 +104,7 @@ class LOIQ_Agent_Safeguards {
      *
      * @param array<string, bool> $modes
      */
-    public static function set_power_modes(array $modes) {
+    public static function set_power_modes(array $modes): void {
         $clean = [];
         foreach (self::$default_modes as $key => $default) {
             $clean[$key] = !empty($modes[$key]);
@@ -127,7 +127,7 @@ class LOIQ_Agent_Safeguards {
      * @param string      $session_id   Claude session identifier
      * @return int|false  Snapshot ID on success, false on failure
      */
-    public static function create_snapshot($action_type, $target_key, $before, $after = null, $executed = false, $session_id = '') {
+    public static function create_snapshot(string $action_type, string $target_key, $before, $after = null, bool $executed = false, string $session_id = '') {
         global $wpdb;
         $table = $wpdb->prefix . 'loiq_agent_snapshots';
 
@@ -155,7 +155,7 @@ class LOIQ_Agent_Safeguards {
      * @param int   $snapshot_id
      * @param mixed $after_value
      */
-    public static function mark_executed($snapshot_id, $after_value) {
+    public static function mark_executed(int $snapshot_id, $after_value): void {
         global $wpdb;
         $table = $wpdb->prefix . 'loiq_agent_snapshots';
 
@@ -171,7 +171,7 @@ class LOIQ_Agent_Safeguards {
      * @param int $snapshot_id
      * @return array|WP_Error  Result with details or error
      */
-    public static function rollback_snapshot($snapshot_id) {
+    public static function rollback_snapshot(int $snapshot_id) {
         global $wpdb;
         $table = $wpdb->prefix . 'loiq_agent_snapshots';
 
@@ -181,15 +181,15 @@ class LOIQ_Agent_Safeguards {
         ));
 
         if (!$snapshot) {
-            return new WP_Error('snapshot_not_found', 'Snapshot niet gevonden', ['status' => 404]);
+            return new WP_Error('snapshot_not_found', __('Snapshot niet gevonden', 'loiq-wp-agent'), ['status' => 404]);
         }
 
         if (!$snapshot->executed) {
-            return new WP_Error('not_executed', 'Snapshot was een dry-run, niets om terug te draaien', ['status' => 400]);
+            return new WP_Error('not_executed', __('Snapshot was een dry-run, niets om terug te draaien', 'loiq-wp-agent'), ['status' => 400]);
         }
 
         if ($snapshot->rolled_back) {
-            return new WP_Error('already_rolled_back', 'Snapshot is al teruggedraaid', ['status' => 400]);
+            return new WP_Error('already_rolled_back', __('Snapshot is al teruggedraaid', 'loiq-wp-agent'), ['status' => 400]);
         }
 
         $before = json_decode($snapshot->before_value, true);
@@ -221,7 +221,7 @@ class LOIQ_Agent_Safeguards {
      * @param mixed  $before_value
      * @return true|WP_Error
      */
-    private static function execute_rollback($action_type, $target_key, $before_value) {
+    private static function execute_rollback(string $action_type, string $target_key, $before_value) {
         switch ($action_type) {
             case 'css':
                 return self::rollback_css($target_key, $before_value);
@@ -238,7 +238,7 @@ class LOIQ_Agent_Safeguards {
             case 'content':
                 $post_id = (int) $target_key;
                 if ($post_id <= 0) {
-                    return new WP_Error('invalid_post', 'Ongeldige post ID', ['status' => 400]);
+                    return new WP_Error('invalid_post', __('Ongeldige post ID', 'loiq-wp-agent'), ['status' => 400]);
                 }
                 // Restore post data
                 if (!empty($before_value['post'])) {
@@ -279,7 +279,7 @@ class LOIQ_Agent_Safeguards {
                 // before_value = post data array with post_content, meta, etc.
                 $post_id = (int) $target_key;
                 if ($post_id <= 0) {
-                    return new WP_Error('invalid_post', 'Ongeldige post ID voor Divi rollback', ['status' => 400]);
+                    return new WP_Error('invalid_post', __('Ongeldige post ID voor Divi rollback', 'loiq-wp-agent'), ['status' => 400]);
                 }
                 if (!empty($before_value['post'])) {
                     wp_update_post($before_value['post']);
@@ -295,7 +295,7 @@ class LOIQ_Agent_Safeguards {
                 // before_value = full functions.php content
                 $functions_file = get_stylesheet_directory() . '/functions.php';
                 if (!is_writable($functions_file) && !is_writable(dirname($functions_file))) {
-                    return new WP_Error('not_writable', 'functions.php is niet schrijfbaar', ['status' => 500]);
+                    return new WP_Error('not_writable', __('functions.php is niet schrijfbaar', 'loiq-wp-agent'), ['status' => 500]);
                 }
                 global $wp_filesystem;
                 if (empty($wp_filesystem)) {
@@ -357,7 +357,7 @@ class LOIQ_Agent_Safeguards {
                 return true;
 
             default:
-                return new WP_Error('unknown_type', 'Onbekend snapshot type: ' . $action_type, ['status' => 400]);
+                return new WP_Error('unknown_type', sprintf(__('Onbekend snapshot type: %s', 'loiq-wp-agent'), $action_type), ['status' => 400]);
         }
     }
 
@@ -368,12 +368,12 @@ class LOIQ_Agent_Safeguards {
      * @param mixed  $before_value
      * @return true|WP_Error
      */
-    private static function rollback_css($target_key, $before_value) {
+    private static function rollback_css(string $target_key, $before_value) {
         switch ($target_key) {
             case 'child_theme':
                 $css_file = get_stylesheet_directory() . '/style.css';
                 if (!is_writable($css_file) && !is_writable(dirname($css_file))) {
-                    return new WP_Error('not_writable', 'Child theme style.css is niet schrijfbaar', ['status' => 500]);
+                    return new WP_Error('not_writable', __('Child theme style.css is niet schrijfbaar', 'loiq-wp-agent'), ['status' => 500]);
                 }
                 global $wp_filesystem;
                 if (empty($wp_filesystem)) {
@@ -401,7 +401,7 @@ class LOIQ_Agent_Safeguards {
                 return true;
 
             default:
-                return new WP_Error('unknown_css_target', 'Onbekend CSS target: ' . $target_key, ['status' => 400]);
+                return new WP_Error('unknown_css_target', sprintf(__('Onbekend CSS target: %s', 'loiq-wp-agent'), $target_key), ['status' => 400]);
         }
     }
 
@@ -411,7 +411,7 @@ class LOIQ_Agent_Safeguards {
      * @param int $limit
      * @return array
      */
-    public static function get_snapshots($limit = 20) {
+    public static function get_snapshots(int $limit = 20): array {
         global $wpdb;
         $table = $wpdb->prefix . 'loiq_agent_snapshots';
 
@@ -447,7 +447,7 @@ class LOIQ_Agent_Safeguards {
      * @param string $client_ip
      * @return true|WP_Error
      */
-    public static function check_write_rate_limit($client_ip) {
+    public static function check_write_rate_limit(string $client_ip) {
         $ip_hash = md5($client_ip);
 
         // Per minute
@@ -455,7 +455,7 @@ class LOIQ_Agent_Safeguards {
         $minute_count = (int) get_transient($minute_key);
         if ($minute_count >= self::WRITE_RATE_LIMIT_MINUTE) {
             return new WP_Error('write_rate_limit',
-                'Te veel write requests (max ' . self::WRITE_RATE_LIMIT_MINUTE . '/min)',
+                sprintf(__('Te veel write requests (max %d/min)', 'loiq-wp-agent'), self::WRITE_RATE_LIMIT_MINUTE),
                 ['status' => 429]
             );
         }
@@ -465,7 +465,7 @@ class LOIQ_Agent_Safeguards {
         $hour_count = (int) get_transient($hour_key);
         if ($hour_count >= self::WRITE_RATE_LIMIT_HOUR) {
             return new WP_Error('write_rate_limit',
-                'Te veel write requests (max ' . self::WRITE_RATE_LIMIT_HOUR . '/uur)',
+                sprintf(__('Te veel write requests (max %d/uur)', 'loiq-wp-agent'), self::WRITE_RATE_LIMIT_HOUR),
                 ['status' => 429]
             );
         }
@@ -489,12 +489,12 @@ class LOIQ_Agent_Safeguards {
      * @param string|null $name Optional snippet name — if set and snippet already exists, skip count check (update).
      * @return true|WP_Error  true if safe, WP_Error with details if dangerous
      */
-    public static function scan_snippet($code, $name = null) {
+    public static function scan_snippet(string $code, ?string $name = null) {
         // Line count check
         $lines = substr_count($code, "\n") + 1;
         if ($lines > self::SNIPPET_MAX_LINES) {
             return new WP_Error('snippet_too_long',
-                'Snippet overschrijdt maximum van ' . self::SNIPPET_MAX_LINES . ' regels (' . $lines . ' gegeven)',
+                sprintf(__('Snippet overschrijdt maximum van %1$d regels (%2$d gegeven)', 'loiq-wp-agent'), self::SNIPPET_MAX_LINES, $lines),
                 ['status' => 400]
             );
         }
@@ -510,7 +510,7 @@ class LOIQ_Agent_Safeguards {
             $active = self::count_active_snippets();
             if ($active >= self::SNIPPET_MAX_ACTIVE) {
                 return new WP_Error('too_many_snippets',
-                    'Maximum ' . self::SNIPPET_MAX_ACTIVE . ' actieve snippets bereikt (' . $active . ' actief)',
+                    sprintf(__('Maximum %1$d actieve snippets bereikt (%2$d actief)', 'loiq-wp-agent'), self::SNIPPET_MAX_ACTIVE, $active),
                     ['status' => 400]
                 );
             }
@@ -520,7 +520,7 @@ class LOIQ_Agent_Safeguards {
         foreach (self::$dangerous_patterns as $pattern) {
             if (preg_match($pattern, $code, $matches)) {
                 return new WP_Error('dangerous_code',
-                    'Geblokkeerde code patroon gevonden: ' . $matches[0],
+                    sprintf(__('Geblokkeerde code patroon gevonden: %s', 'loiq-wp-agent'), $matches[0]),
                     ['status' => 403]
                 );
             }
@@ -544,11 +544,11 @@ class LOIQ_Agent_Safeguards {
      * @param string $code
      * @return true|WP_Error
      */
-    private static function scan_snippet_tokens($code) {
+    private static function scan_snippet_tokens(string $code) {
         $full_code = '<?php ' . $code;
         $tokens = @token_get_all($full_code);
         if ($tokens === false) {
-            return new WP_Error('parse_error', 'PHP code kan niet geparsed worden', ['status' => 400]);
+            return new WP_Error('parse_error', __('PHP code kan niet geparsed worden', 'loiq-wp-agent'), ['status' => 400]);
         }
 
         // Direct dangerous functions
@@ -591,7 +591,7 @@ class LOIQ_Agent_Safeguards {
                 $next = self::next_non_whitespace($tokens, $i);
                 if ($next === '(') {
                     return new WP_Error('dangerous_function',
-                        "Geblokkeerde functie-aanroep: {$token[1]}()",
+                        sprintf(__('Geblokkeerde functie-aanroep: %s()', 'loiq-wp-agent'), $token[1]),
                         ['status' => 403]
                     );
                 }
@@ -602,7 +602,7 @@ class LOIQ_Agent_Safeguards {
                 $next = self::next_non_whitespace($tokens, $i);
                 if ($next === '(') {
                     return new WP_Error('dangerous_callback',
-                        "Functie met callback niet toegestaan: {$token[1]}() — kan gebruikt worden om code execution te omzeilen",
+                        sprintf(__('Functie met callback niet toegestaan: %s() — kan gebruikt worden om code execution te omzeilen', 'loiq-wp-agent'), $token[1]),
                         ['status' => 403]
                     );
                 }
@@ -611,7 +611,7 @@ class LOIQ_Agent_Safeguards {
             // Block Reflection API (new ReflectionFunction('system')->invoke())
             if ($type === T_STRING && in_array($value, $dangerous_classes, true)) {
                 return new WP_Error('dangerous_reflection',
-                    "Reflection API niet toegestaan: {$token[1]}",
+                    sprintf(__('Reflection API niet toegestaan: %s', 'loiq-wp-agent'), $token[1]),
                     ['status' => 403]
                 );
             }
@@ -621,7 +621,7 @@ class LOIQ_Agent_Safeguards {
                 $next = self::next_non_whitespace($tokens, $i);
                 if ($next === '(') {
                     return new WP_Error('variable_function',
-                        "Variabele functie-aanroep niet toegestaan: {$token[1]}()",
+                        sprintf(__('Variabele functie-aanroep niet toegestaan: %s()', 'loiq-wp-agent'), $token[1]),
                         ['status' => 403]
                     );
                 }
@@ -645,7 +645,7 @@ class LOIQ_Agent_Safeguards {
                         while ($j < $token_count && is_array($tokens[$j]) && $tokens[$j][0] === T_WHITESPACE) $j++;
                         if ($j < $token_count && !is_array($tokens[$j]) && $tokens[$j] === '(') {
                             return new WP_Error('superglobal_function',
-                                "Superglobal als functie niet toegestaan: {$token[1]}[...]() — code injection vector",
+                                sprintf(__('Superglobal als functie niet toegestaan: %s[...]() — code injection vector', 'loiq-wp-agent'), $token[1]),
                                 ['status' => 403]
                             );
                         }
@@ -658,7 +658,7 @@ class LOIQ_Agent_Safeguards {
                 $next_token = self::next_non_whitespace_token($tokens, $i);
                 if ($next_token && is_array($next_token) && $next_token[0] === T_VARIABLE) {
                     return new WP_Error('dynamic_include',
-                        "Dynamische include niet toegestaan: {$token[1]} {$next_token[1]}",
+                        sprintf(__('Dynamische include niet toegestaan: %1$s %2$s', 'loiq-wp-agent'), $token[1], $next_token[1]),
                         ['status' => 403]
                     );
                 }
@@ -673,7 +673,7 @@ class LOIQ_Agent_Safeguards {
         // Block backtick operator (shell execution) — not always tokenized cleanly
         if (preg_match('/(?<![\\\\])`[^`]+`/', $code)) {
             return new WP_Error('backtick_execution',
-                'Backtick shell execution niet toegestaan',
+                __('Backtick shell execution niet toegestaan', 'loiq-wp-agent'),
                 ['status' => 403]
             );
         }
@@ -684,7 +684,7 @@ class LOIQ_Agent_Safeguards {
     /**
      * Get next non-whitespace token value (char or string).
      */
-    private static function next_non_whitespace(array $tokens, int $from) {
+    private static function next_non_whitespace(array $tokens, int $from): ?string {
         for ($j = $from + 1; $j < count($tokens); $j++) {
             if (is_array($tokens[$j]) && $tokens[$j][0] === T_WHITESPACE) continue;
             return is_array($tokens[$j]) ? $tokens[$j][1] : $tokens[$j];
@@ -709,7 +709,7 @@ class LOIQ_Agent_Safeguards {
      * @param string $code
      * @return true|WP_Error
      */
-    private static function check_php_syntax($code) {
+    private static function check_php_syntax(string $code) {
         $full = "<?php\nif (!defined('ABSPATH')) exit;\n" . $code;
 
         try {
@@ -717,14 +717,14 @@ class LOIQ_Agent_Safeguards {
             // token_get_all with TOKEN_PARSE throws ParseError on syntax errors
             if ($tokens === false) {
                 return new WP_Error('syntax_error',
-                    'PHP syntax fout: code kan niet geparsed worden',
+                    __('PHP syntax fout: code kan niet geparsed worden', 'loiq-wp-agent'),
                     ['status' => 400]
                 );
             }
         } catch (\ParseError $e) {
             $error_msg = $e->getMessage();
             return new WP_Error('syntax_error',
-                'PHP syntax fout: ' . $error_msg,
+                sprintf(__('PHP syntax fout: %s', 'loiq-wp-agent'), $error_msg),
                 ['status' => 400]
             );
         }
@@ -739,11 +739,11 @@ class LOIQ_Agent_Safeguards {
      * @param string $code
      * @return true|WP_Error
      */
-    public static function scan_code_security($code) {
+    public static function scan_code_security(string $code) {
         foreach (self::$dangerous_patterns as $pattern) {
             if (preg_match($pattern, $code, $matches)) {
                 return new WP_Error('dangerous_code',
-                    'Geblokkeerde code patroon gevonden: ' . $matches[0],
+                    sprintf(__('Geblokkeerde code patroon gevonden: %s', 'loiq-wp-agent'), $matches[0]),
                     ['status' => 403]
                 );
             }
@@ -758,7 +758,7 @@ class LOIQ_Agent_Safeguards {
      *
      * @return int
      */
-    public static function count_active_snippets() {
+    public static function count_active_snippets(): int {
         $mu_dir = ABSPATH . 'wp-content/mu-plugins';
         if (!is_dir($mu_dir)) return 0;
 
@@ -771,7 +771,7 @@ class LOIQ_Agent_Safeguards {
      *
      * @return array
      */
-    public static function get_deployed_snippets() {
+    public static function get_deployed_snippets(): array {
         $mu_dir = ABSPATH . 'wp-content/mu-plugins';
         if (!is_dir($mu_dir)) return [];
 
@@ -798,16 +798,16 @@ class LOIQ_Agent_Safeguards {
      * @param string $name
      * @return true|WP_Error
      */
-    public static function remove_snippet($name) {
+    public static function remove_snippet(string $name) {
         $safe_name = sanitize_file_name($name);
         $mu_file = ABSPATH . 'wp-content/mu-plugins/loiq-snippet-' . $safe_name . '.php';
 
         if (!file_exists($mu_file)) {
-            return new WP_Error('snippet_not_found', 'Snippet niet gevonden: ' . $safe_name, ['status' => 404]);
+            return new WP_Error('snippet_not_found', sprintf(__('Snippet niet gevonden: %s', 'loiq-wp-agent'), $safe_name), ['status' => 404]);
         }
 
         if (!@unlink($mu_file)) {
-            return new WP_Error('snippet_delete_failed', 'Kan snippet niet verwijderen', ['status' => 500]);
+            return new WP_Error('snippet_delete_failed', __('Kan snippet niet verwijderen', 'loiq-wp-agent'), ['status' => 500]);
         }
 
         return true;
@@ -824,11 +824,11 @@ class LOIQ_Agent_Safeguards {
      * @param string $css
      * @return true|WP_Error
      */
-    public static function validate_css($css) {
+    public static function validate_css(string $css) {
         // Block HTML tags (XSS: <script>, <style>, <iframe>, <img onerror>)
         if (preg_match('/<\s*(script|style|iframe|img|svg|object|embed|link|meta|base)\b/i', $css)) {
             return new WP_Error('css_html_injection',
-                'HTML tags niet toegestaan in CSS',
+                __('HTML tags niet toegestaan in CSS', 'loiq-wp-agent'),
                 ['status' => 403]
             );
         }
@@ -836,7 +836,7 @@ class LOIQ_Agent_Safeguards {
         // Block CSS expression() — IE XSS vector
         if (preg_match('/expression\s*\(/i', $css)) {
             return new WP_Error('css_expression',
-                'CSS expression() niet toegestaan (XSS vector)',
+                __('CSS expression() niet toegestaan (XSS vector)', 'loiq-wp-agent'),
                 ['status' => 403]
             );
         }
@@ -844,7 +844,7 @@ class LOIQ_Agent_Safeguards {
         // Block javascript: protocol in url()
         if (preg_match('/url\s*\(\s*[\'"]?\s*javascript\s*:/i', $css)) {
             return new WP_Error('css_javascript_url',
-                'javascript: protocol in url() niet toegestaan',
+                __('javascript: protocol in url() niet toegestaan', 'loiq-wp-agent'),
                 ['status' => 403]
             );
         }
@@ -852,7 +852,7 @@ class LOIQ_Agent_Safeguards {
         // Block data: URIs (can embed scripts)
         if (preg_match('/url\s*\(\s*[\'"]?\s*data\s*:/i', $css)) {
             return new WP_Error('css_data_uri',
-                'data: URI in url() niet toegestaan',
+                __('data: URI in url() niet toegestaan', 'loiq-wp-agent'),
                 ['status' => 403]
             );
         }
@@ -860,7 +860,7 @@ class LOIQ_Agent_Safeguards {
         // Block -moz-binding (XBL exploit, old Firefox)
         if (preg_match('/-moz-binding\s*:/i', $css)) {
             return new WP_Error('css_moz_binding',
-                '-moz-binding niet toegestaan (XBL exploit)',
+                __('-moz-binding niet toegestaan (XBL exploit)', 'loiq-wp-agent'),
                 ['status' => 403]
             );
         }
@@ -868,7 +868,7 @@ class LOIQ_Agent_Safeguards {
         // Block @import with external URLs (can load malicious stylesheets)
         if (preg_match('/@import\s+(url\s*\()?\s*[\'"]?\s*https?:/i', $css)) {
             return new WP_Error('css_external_import',
-                '@import met externe URL niet toegestaan',
+                __('@import met externe URL niet toegestaan', 'loiq-wp-agent'),
                 ['status' => 403]
             );
         }
@@ -878,7 +878,7 @@ class LOIQ_Agent_Safeguards {
         $close = substr_count($css, '}');
         if ($open !== $close) {
             return new WP_Error('css_unbalanced_braces',
-                "Ongebalanceerde braces: {$open} open, {$close} gesloten",
+                sprintf(__('Ongebalanceerde braces: %1$d open, %2$d gesloten', 'loiq-wp-agent'), $open, $close),
                 ['status' => 400]
             );
         }
@@ -897,7 +897,7 @@ class LOIQ_Agent_Safeguards {
      * @return int       Number of rows deleted
      * @since 3.1.0
      */
-    public static function prune_snapshots($days = 30) {
+    public static function prune_snapshots(int $days = 30): int {
         global $wpdb;
         $table = $wpdb->prefix . 'loiq_agent_snapshots';
         $days = max(1, (int) $days);
@@ -916,7 +916,7 @@ class LOIQ_Agent_Safeguards {
      * @return array{total: int, oldest: string|null, size_bytes: int}
      * @since 3.1.0
      */
-    public static function get_snapshot_stats() {
+    public static function get_snapshot_stats(): array {
         global $wpdb;
         $table = $wpdb->prefix . 'loiq_agent_snapshots';
 
@@ -944,7 +944,7 @@ class LOIQ_Agent_Safeguards {
      *
      * @return string
      */
-    private static function get_anonymized_ip() {
+    private static function get_anonymized_ip(): string {
         $ip = sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'));
 
         // Only trust proxy headers when request comes from configured trusted proxy

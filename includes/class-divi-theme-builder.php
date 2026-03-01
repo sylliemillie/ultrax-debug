@@ -19,7 +19,7 @@ class LOIQ_Agent_Divi_Theme_Builder {
      *
      * @param LOIQ_WP_Agent $plugin  Reference to main plugin for permission callbacks
      */
-    public static function register_routes($plugin) {
+    public static function register_routes(LOIQ_WP_Agent $plugin): void {
         $namespace = 'claude/v3';
 
         // --- THEME BUILDER READ ENDPOINTS ---
@@ -752,7 +752,7 @@ class LOIQ_Agent_Divi_Theme_Builder {
      * @param string $layout_post_type  et_header_layout | et_body_layout | et_footer_layout
      * @return bool
      */
-    private static function template_has_layout($template_id, $layout_post_type) {
+    private static function template_has_layout(int $template_id, string $layout_post_type): bool {
         $layout = self::get_template_layout($template_id, $layout_post_type);
         return $layout !== null;
     }
@@ -767,7 +767,7 @@ class LOIQ_Agent_Divi_Theme_Builder {
      * @param string $layout_post_type
      * @return WP_Post|null
      */
-    private static function get_template_layout($template_id, $layout_post_type) {
+    private static function get_template_layout(int $template_id, string $layout_post_type) {
         // Primary: layout posts with this template as parent
         $layouts = get_posts([
             'post_type'      => $layout_post_type,
@@ -810,7 +810,7 @@ class LOIQ_Agent_Divi_Theme_Builder {
      * @param string $title             Layout title
      * @return int|WP_Error             Layout post ID on success
      */
-    private static function create_layout_post($template_id, $layout_post_type, $content, $title) {
+    private static function create_layout_post(int $template_id, string $layout_post_type, string $content, string $title) {
         $layout_id = wp_insert_post([
             'post_type'    => $layout_post_type,
             'post_parent'  => $template_id,
@@ -850,7 +850,7 @@ class LOIQ_Agent_Divi_Theme_Builder {
      * @param string $title
      * @return int|WP_Error  Layout post ID
      */
-    private static function update_or_create_layout($template_id, $layout_post_type, $content, $title) {
+    private static function update_or_create_layout(int $template_id, string $layout_post_type, string $content, string $title) {
         $existing = self::get_template_layout($template_id, $layout_post_type);
 
         if ($existing) {
@@ -877,7 +877,7 @@ class LOIQ_Agent_Divi_Theme_Builder {
      * @param int $template_id
      * @return array
      */
-    private static function capture_template_layouts($template_id) {
+    private static function capture_template_layouts(int $template_id): array {
         $header = self::get_template_layout($template_id, 'et_header_layout');
         $body   = self::get_template_layout($template_id, 'et_body_layout');
         $footer = self::get_template_layout($template_id, 'et_footer_layout');

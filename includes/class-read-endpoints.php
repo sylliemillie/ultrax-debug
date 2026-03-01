@@ -17,7 +17,7 @@ class LOIQ_Agent_Read_Endpoints {
      *
      * @param LOIQ_WP_Agent $plugin Main plugin instance (for permission callbacks).
      */
-    public static function register_routes($plugin) {
+    public static function register_routes(LOIQ_WP_Agent $plugin): void {
         $namespace = 'claude/v1';
 
         register_rest_route($namespace, '/status', [
@@ -657,7 +657,7 @@ class LOIQ_Agent_Read_Endpoints {
     /**
      * Scan a file for patterns and return matches with context.
      */
-    private static function scan_file_for_patterns($file, $patterns) {
+    private static function scan_file_for_patterns(string $file, array $patterns): array {
         $matches = [];
         $lines = file($file, FILE_IGNORE_NEW_LINES);
 
@@ -688,7 +688,7 @@ class LOIQ_Agent_Read_Endpoints {
     /**
      * Check if line contains sensitive data.
      */
-    private static function contains_sensitive_data($line) {
+    private static function contains_sensitive_data(string $line): bool {
         $sensitive_patterns = [
             '/api[_-]?key/i',
             '/secret/i',
@@ -712,7 +712,7 @@ class LOIQ_Agent_Read_Endpoints {
     /**
      * Extract hook name from add_action/add_filter call.
      */
-    private static function extract_hook_name($line) {
+    private static function extract_hook_name(string $line): ?string {
         if (preg_match('/add_(action|filter)\s*\(\s*[\'"]([^\'"]+)[\'"]/', $line, $matches)) {
             return $matches[2];
         }
@@ -722,7 +722,7 @@ class LOIQ_Agent_Read_Endpoints {
     /**
      * Sanitize snippet for safe output.
      */
-    private static function sanitize_snippet($line) {
+    private static function sanitize_snippet(string $line): string {
         $line = trim($line);
         if (strlen($line) > 150) {
             $line = substr($line, 0, 147) . '...';
@@ -733,7 +733,7 @@ class LOIQ_Agent_Read_Endpoints {
     /**
      * Extract function names from hook matches.
      */
-    private static function extract_function_names($hooks) {
+    private static function extract_function_names(array $hooks): array {
         $functions = [];
         foreach ($hooks as $hook) {
             if (preg_match('/[\'"]([a-zA-Z_][a-zA-Z0-9_]*)[\'"]/', $hook['snippet'], $matches)) {
@@ -749,7 +749,7 @@ class LOIQ_Agent_Read_Endpoints {
     /**
      * Format bytes to human readable.
      */
-    private static function format_bytes($bytes) {
+    private static function format_bytes(int $bytes): string {
         $units = ['B', 'KB', 'MB', 'GB'];
         $i = 0;
         while ($bytes >= 1024 && $i < count($units) - 1) {
